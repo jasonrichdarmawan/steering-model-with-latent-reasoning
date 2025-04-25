@@ -9,7 +9,7 @@ The authors published the [paper's repository](https://github.com/FlyingPumba/st
 Models used:
 - [ ] Thinking models: DeepSeek-R1-Distill-Llama-8B and DeepSeek-R1-Distill-Qwen-14B
 
-      > We conduct our experiments on two DeepSeek-R1-Distill models: Qwen-14B and Llama-8B
+  > We conduct our experiments on two DeepSeek-R1-Distill models: Qwen-14B and Llama-8B
 
 - ~~Non-thinking model for comparison, GPT-4o~~
 
@@ -19,46 +19,48 @@ Models used:
 
 - [ ] A model for annotation, GPT-4o
 
-      > To obtain token positions associated with each behavioral category, we generate 300 reasoning chains with the tasks introduced in Section 4.1, using both DeepSeek-R1-Distill models and then annotate them automatically with GPT-4o
+  > To obtain token positions associated with each behavioral category, we generate 300 reasoning chains with the tasks introduced in Section 4.1, using both DeepSeek-R1-Distill models and then annotate them automatically with GPT-4o
 
 - [ ] A model for task generation, Claude 3.5 Sonnet
 
-      > we generate a dataset of 300 tasks across 10 categories using Claude 3.5 Sonnet (see Table 1).
+  > we generate a dataset of 300 tasks across 10 categories using Claude 3.5 Sonnet (see Table 1).
 
 Steps to do:
 - [ ] Generate Task Dataset
 
-      > we generate a dataset of 300 tasks across 10 categories using Claude 3.5 Sonnet (see Table 1).
+  > we generate a dataset of 300 tasks across 10 categories using Claude 3.5 Sonnet (see Table 1).
 
 - [ ] Generate Initial Reasoning Chains
 
-      > When generating a reasoning chain, we use greedy decoding and 500 max tokens per response.
+  > When generating a reasoning chain, we use greedy decoding and 500 max tokens per response.
 
 - [ ] Annotate Reasoning Chains, identify relevant token positions
 
-      > To obtain token positions asssociated with each behavioral category, we generate 300 reasoning chains with the tasks introduced in Section 4.1, using both DeepSeek-R1-Distill models and then annotate them automatically with GPT-4o.
+  > To obtain token positions asssociated with each behavioral category, we generate 300 reasoning chains with the tasks introduced in Section 4.1, using both DeepSeek-R1-Distill models and then annotate them automatically with GPT-4o.
 
 - [ ] Calculate Layer-wise Candidate Steering Vectors
 
-      See [Core Idea](#core-idea) `To extract a steering vector candidate`
+  See [Core Idea](#core-idea) `To extract a steering vector candidate`
 
 - [ ] Identify Causally Relevant Layers via Attribution Patching
 
-      See [Core Idea](#core-idea) `To select final steering vectors`
+  See [Core Idea](#core-idea) `To select final steering vectors`
 
-      - [ ] Plot these average absolute patching effects per layer (like Figure 3) to identify layers with high causal relevance for each behavior
+  - [ ] Plot these average absolute patching effects per layer (like Figure 3) to identify layers with high causal relevance for each behavior
 
-      - [ ] Select Final Steering Vectors and Layers
+  - [ ] Select Final Steering Vectors and Layers
 
 - [ ] Select a set of unseen reasoning tasks for evaluating the effects of steering vectors
 
-      > We apply each steering vector to 30 unseen reasoning tasks and analyze how the model's reasoning behavior changes.
+  > We apply each steering vector to 30 unseen reasoning tasks and analyze how the model's reasoning behavior changes.
 
 - [ ] Evaluate the effects of steering vectors
 
-      See [Core Idea](#core-idea) `When steering in multiple layers`
+  See [Core Idea](#core-idea) `When steering in multiple layers`
 
-      > As shown in Figure 4, positive steering increases behaviors such as backtracking, uncertainty estimation, and example testing, while negative steering reduces them.
+  > As shown in Figure 4, positive steering increases behaviors such as backtracking, uncertainty estimation, and example testing, while negative steering reduces them.
+
+  - [ ] Quantify Steering Effects (like Figure 4)
 
 # Core idea
 
