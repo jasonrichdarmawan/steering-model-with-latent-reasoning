@@ -1,3 +1,6 @@
+<details>
+<summary>Postponed plan: Minimal code, reproduction of the paper "Understanding Reasoning in Thinking Language Models via Steering Vectors"</summary>
+
 # Note
 
 The authors published the [paper's repository](https://github.com/FlyingPumba/steering-thinking-models) on 25 April 2025. Meanwhile, this repository is specifically for reproducing:
@@ -91,3 +94,4 @@ Steps to do:
   > Steering is implemented by adding or subtracting the extracted steering vectors $u_\mathcal{l}^c$ to the residual stream activations at inference time.
   > When steering in multiple layers simultaneously, we scale each addition or subtraction b a coefficient equal to the reciprocal of the number of layers.
   > By applying this intervention, we can increase or decrease behaviors such as backtracking, uncertainty estimation, and example testing, providing a direct mechanism for manipulating the model's reasoning process.
+  </details>
