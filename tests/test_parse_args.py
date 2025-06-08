@@ -1,7 +1,7 @@
 import unittest
 import sys
 
-from utils.parse_args import parse_args
+from utils import parse_args
 
 class TestParseArgs(unittest.TestCase):
   def setUp(self):

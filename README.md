@@ -4,6 +4,16 @@
 $ python -m experiments.extract_hidden_states
 ```
 
+# How to test
+
+```shell
+$ python -m unittest discover tests
+```
+
+# Disclaimer
+
+- `datasets.zip` is downloaded from [this repository](https://github.com/yihuaihong/Linear_Reasoning_Features/blob/73de7e0802874ad2dc55c1f6aa7d714899fe80f6/dataset.zip)
+
 <details>
 <summary>Postponed plan: Minimal code, reproduction of the paper "Understanding Reasoning in Thinking Language Models via Steering Vectors"</summary>
 

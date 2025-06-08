@@ -1,7 +1,7 @@
 # %%
 
 import unittest
-from utils.load_model_and_tokenizer import load_model_and_tokenizer
+from utils import load_model_and_tokenizer
 
 class TestLoadModelAndTokenizer(unittest.TestCase):
   def test_load_model_and_tokenizer(self):

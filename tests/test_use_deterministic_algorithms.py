@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from utils.use_deterministic_algorithms import use_deterministic_algorithms
+from utils import use_deterministic_algorithms
 
 class TestUseDeterministicAlgorithms(unittest.TestCase):
   def test_use_deterministic_algorithms(self):
