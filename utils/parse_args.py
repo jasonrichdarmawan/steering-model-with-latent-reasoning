@@ -9,11 +9,14 @@ def parse_args() -> Args:
   parser = argparse.ArgumentParser()
 
   parser.add_argument('--models_path', type=str,
-                      help="Path to the root directory containing multiple model folders")
+                      help="Path to the root directory containing multiple model folders",
+                      default="/root/autodl-fs/transformers")
   parser.add_argument('--model_name', type=str,
-                      help="Folder name of the specific model to load from the root directory")
+                      help="Folder name of the specific model to load from the root directory",
+                      default="huginn-0125")
   
-  args = parser.parse_args()
+  args, _ = parser.parse_known_args()
+
   return {
     "models_path": args.models_path,
     "model_name": args.model_name,

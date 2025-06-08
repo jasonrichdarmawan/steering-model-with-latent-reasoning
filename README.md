@@ -1,3 +1,9 @@
+# How to run
+
+```shell
+$ python -m experiments.extract_hidden_states
+```
+
 <details>
 <summary>Postponed plan: Minimal code, reproduction of the paper "Understanding Reasoning in Thinking Language Models via Steering Vectors"</summary>
 
