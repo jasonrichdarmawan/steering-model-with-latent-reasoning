@@ -5,21 +5,38 @@ if False:
   from importlib import reload
 
   print("Reloading modules to ensure the latest code is used.")
+  
+  reload(sys.modules.get('shs_utils.parse_args', sys))
+  reload(sys.modules.get('shs_utils', sys))
+
   reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
-  reload(sys.modules.get('utils.parse_args', sys))
   reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
   reload(sys.modules.get('utils.cache_hidden_states', sys))
   reload(sys.modules.get('utils', sys))
 
+# %%
+
+import os
+import sys
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if project_root not in sys.path:
+  print(f"Adding project root to sys.path: {project_root}")
+  sys.path.insert(0, project_root)
+
+# %%
+
+from shs_utils import parse_args
+
 from utils import use_deterministic_algorithms
-from utils import parse_args
 from utils import load_model_and_tokenizer
 from utils import load_and_sample_test_dataset
 from utils import cache_hidden_states
 
-import os
 import torch
+
+# %%
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")

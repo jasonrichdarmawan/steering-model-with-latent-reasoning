@@ -1,7 +1,7 @@
 import unittest
 import sys
 
-from utils import parse_args
+from experiments.save_hidden_states.shs_utils import parse_args
 
 class TestParseArgs(unittest.TestCase):
   def setUp(self):
