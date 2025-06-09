@@ -42,9 +42,11 @@ def get_n_embd(model) -> int:
       print("Model type not recognized for n_embd retrieval.")
       return 0
     
-def _cache_hidden_states_huginn(data, tokenizer, model, 
-            data_batch_size: int,
-            hidden_states_cache: dict[int, Tensor] = {}):
+def _cache_hidden_states_huginn(
+  data, tokenizer, model, 
+  data_batch_size: int,
+  hidden_states_cache: dict[int, Tensor] = {}
+):
   n_layers = get_n_layers(model)
   n_layers_to_cache = list(range(n_layers))
 
@@ -79,8 +81,8 @@ def _cache_hidden_states_huginn(data, tokenizer, model,
             "return_attention": False,
             "return_head": True,
             "return_stats": False,
-        }
-      )
+          }
+        )
 
       for layer in n_layers_to_cache:
         hidden_states_cache[layer] = torch.cat(
