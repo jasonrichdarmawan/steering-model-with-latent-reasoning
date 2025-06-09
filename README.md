@@ -1,7 +1,7 @@
 # How to run
 
 ```shell
-$ python -m experiments.extract_hidden_states
+$ python -m experiments.save_hidden_states
 ```
 
 # How to test
