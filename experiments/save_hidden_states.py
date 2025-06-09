@@ -2,24 +2,6 @@
 
 if False:
   import sys
-
-  print("Programatically setting sys.argv for testing purposes.")
-  sys.argv = [
-    'extract_hidden_states.py',
-    '--models_path', '/root/autodl-fs/transformers',
-    '--model_name', 'huginn-0125',
-    '--data_path', '/root/autodl-fs/datasets',
-    '--data_name', 'mmlu-pro',
-    '--data_sample_size', '600',
-    '--data_batch_size', '4',
-    '--output_path', '/root/autodl-fs/hidden_states_cache',
-  ]
-
-args = parse_args()
-
-# %%
-
-if False:
   from importlib import reload
 
   print("Reloading modules to ensure the latest code is used.")
@@ -38,6 +20,21 @@ from utils import cache_hidden_states
 
 import os
 import torch
+
+if False:
+  print("Programatically setting sys.argv for testing purposes.")
+  sys.argv = [
+    'extract_hidden_states.py',
+    '--models_path', '/root/autodl-fs/transformers',
+    '--model_name', 'huginn-0125',
+    '--data_path', '/root/autodl-fs/datasets',
+    '--data_name', 'mmlu-pro',
+    '--data_sample_size', '600',
+    '--data_batch_size', '4',
+    '--output_path', '/root/autodl-fs/hidden_states_cache',
+  ]
+
+args = parse_args()
 
 # %%
 
