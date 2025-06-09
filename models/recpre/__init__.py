@@ -1,13 +1,13 @@
 import logging
 import re
 
-from recpre.tokenizer import Tokenizer
-from recpre import optim
-from recpre import settings
-from recpre import monitor
+from .tokenizer import Tokenizer
+from .optim import *
+from .settings import *
+from .monitor import *
 
 # Inference
-from recpre import raven_modeling_minimal
+from .raven_modeling_minimal import *
 
 # Suppress excessive warnings, see https://github.com/pytorch/pytorch/issues/111632
 pattern = re.compile(".*Profiler function .* will be ignored")

@@ -4,7 +4,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Use custom code for Huginn models
-import recpre # type: ignore
+from models import recpre # type: ignore
 
 def load_model_and_tokenizer(model_path: str, 
                              model_name: str):

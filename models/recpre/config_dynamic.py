@@ -14,10 +14,10 @@ from torch.utils.checkpoint import checkpoint, create_selective_checkpoint_conte
 if TYPE_CHECKING:
     import torch.utils.checkpoint
 
-from recpre.utils import find_multiple
-from recpre.model_registry import name_to_config, configs
-from recpre.init import Init, init_normal
-from recpre.attention_backends import select_attention_implementation
+from .utils import find_multiple
+from .model_registry import name_to_config, configs
+from .init import Init, init_normal
+from .attention_backends import select_attention_implementation
 
 # patch checkpoint+meta
 from .checkpoint_patch import _checkpoint_without_reentrant_generator

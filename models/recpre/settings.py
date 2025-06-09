@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from contextlib import nullcontext
 from typing import Union, Optional, Any, Literal
 
-from recpre.config_dynamic import Config as DynamicConfig, AnyConfig
+from .config_dynamic import Config as DynamicConfig, AnyConfig
 
 from transformers import AutoModelForCausalLM, AutoConfig
 
