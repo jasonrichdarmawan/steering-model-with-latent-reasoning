@@ -35,7 +35,7 @@ def parse_args() -> Args:
   
   parser.add_argument('--output_path', type=str,
                       help="Path to save the cached hidden states",
-                      default="/root/autodl-fs/hidden_states_cache")
+                      default="/root/autodl-fs/experiments/hidden_states_cache")
   
   args, _ = parser.parse_known_args()
 

@@ -47,7 +47,7 @@ if False:
     '--data_name', 'mmlu-pro',
     '--data_sample_size', '600',
     '--data_batch_size', '4',
-    '--output_path', '/root/autodl-fs/hidden_states_cache',
+    '--output_path', '/root/autodl-fs/experiments/hidden_states_cache',
   ]
 
 args = parse_args()
