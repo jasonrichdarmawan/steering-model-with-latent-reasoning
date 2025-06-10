@@ -411,7 +411,7 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
             attn_maps[block_idx] = attn_map
 
             if return_head:
-                all_hidden_states += (input_embeds.cpu(),)
+                all_hidden_states += (input_embeds,)
 
         # Main recurrence
         x, num_steps_no_grad, num_steps_with_grad, xk, block_idx, attn_maps, all_hidden_states = self.iterate_forward(
@@ -435,7 +435,7 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
             attn_maps[-block_idx] = attn_map
 
             if return_head:
-                all_hidden_states += (x.cpu(),)
+                all_hidden_states += (x,)
 
         x = self.transformer.ln_f(x)
         if return_head:
@@ -524,7 +524,7 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
             x, attn_map = block(x, freqs_cis, block_idx + idx, mask, past_key_values, return_attn=return_attn)
             attn_maps[block_idx + idx] = attn_map
             if return_head:
-                all_hidden_states += (x.cpu(),)
+                all_hidden_states += (x,)
         return x, block_idx + idx, attn_maps, all_hidden_states
 
     @torch.no_grad()

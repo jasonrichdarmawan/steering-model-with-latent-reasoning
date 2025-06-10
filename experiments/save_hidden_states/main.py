@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if True:
+if False:
   import sys
   from importlib import reload
 
@@ -32,21 +32,26 @@ from utils import use_deterministic_algorithms
 from utils import load_model_and_tokenizer
 from utils import load_and_sample_test_dataset
 from utils import cache_hidden_states
+from utils import load_hidden_states_cache
 
 import torch
 
 # %%
 
-if False:
+if True:
   print("Programatically setting sys.argv for testing purposes.")
   sys.argv = [
     'extract_hidden_states.py',
     '--models_path', '/root/autodl-fs/transformers',
     '--model_name', 'huginn-0125',
-    '--data_path', '/root/autodl-fs/datasets',
-    '--data_name', 'mmlu-pro',
-    '--data_sample_size', '600',
-    '--data_batch_size', '4',
+
+    '--data_file_path', '/root/autodl-fs/datasets/mmlu-pro-3000samples.json',
+    # '--data_path', '/root/autodl-fs/datasets',
+    # '--data_name', 'mmlu-pro',
+
+    # '--data_sample_size', '600',
+    '--data_batch_size', '8',
+
     '--output_path', '/root/autodl-fs/experiments/hidden_states_cache',
   ]
 
@@ -67,6 +72,7 @@ model, tokenizer = load_model_and_tokenizer(
 # %%
 
 sampled_data = load_and_sample_test_dataset(
+  data_file_path=args['data_file_path'],
   data_path=args['data_path'],
   data_name=args['data_name'],
   sample_size=args['data_sample_size']
@@ -85,8 +91,18 @@ hidden_states_cache = cache_hidden_states(
 
 os.makedirs(args['output_path'], exist_ok=True)
 
+# %%
+
+output = load_hidden_states_cache(
+  hidden_states_cache_file_path=args['output_path'] + f'/{args["model_name"]}_hidden_states_cache.pt',
+)
+
+# %%
+
+output[args['data_name']] = hidden_states_cache
+
 torch.save(
-  hidden_states_cache, 
+  output, 
   os.path.join(args['output_path'], f'{args["model_name"]}_hidden_states_cache.pt')
 )
 

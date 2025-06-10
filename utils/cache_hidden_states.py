@@ -67,19 +67,20 @@ def _cache_hidden_states_huginn(
         return_token_type_ids=False
       ).input_ids.to("cuda")
 
-      outputs = model(
-        inputs,
-        output_details={
-          "return_logits": False,
-          "return_latents": False,
-          "return_attention": False,
-          "return_head": True,
-          "return_stats": False,
-        }
-      )
+      with torch.no_grad():
+        outputs = model(
+          inputs,
+          output_details={
+            "return_logits": False,
+            "return_latents": False,
+            "return_attention": False,
+            "return_head": True,
+            "return_stats": False,
+          }
+        )
 
       for layer in n_layers_to_cache:
-        # Tensor.detach() is important to avoid memory leak
+        # Tensor.detach() is important to avoid torch.OutOfMemoryError
         hidden_states_cache[layer] = torch.cat(
           (
             hidden_states_cache[layer],

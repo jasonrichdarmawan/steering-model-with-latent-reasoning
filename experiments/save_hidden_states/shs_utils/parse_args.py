@@ -4,10 +4,14 @@ from typing import TypedDict
 class Args(TypedDict):
   models_path: str
   model_name: str
+
+  data_file_path: str
   data_path: str
   data_name: str
-  data_sample_size: int
+
+  data_sample_size: int | None
   data_batch_size: int
+
   output_path: str
 
 def parse_args() -> Args:
@@ -20,17 +24,19 @@ def parse_args() -> Args:
                       help="Folder name of the specific model to load from the root directory",
                       default="huginn-0125")
   
+  parser.add_argument('--data_file_path', type=str,
+                      help="(Optional) Path to a JSON file containing the dataset. If this is provided and not empty, it will be used instead of --data_path and --data_name, which will be ignored.",
+                      default="/root/autodl-fs/datasets/mmlu-pro-3000samples.json")
   parser.add_argument('--data_path', type=str,
-                      help="Path to the root directory containing multiple data folders",
+                      help="(Optional) Path to the root directory containing multiple data folders. Ignored if --data_file_path is provided and not empty.",
                       default="/root/autodl-fs/datasets")
   parser.add_argument('--data_name', type=str,
-                      help="Folder name of the specific dataset to load from the root directory",
+                      help="(Optional) Folder name of the specific dataset to load from the root directory. Ignored if --data_file_path is provided and not empty.",
                       default="mmlu-pro")
   parser.add_argument('--data_sample_size', type=int,
-                      help="Number of samples to randomly select from the test dataset",
-                      default=600)
+                      help="Number of samples to randomly select from the test dataset")
   parser.add_argument('--data_batch_size', type=int,
-                      help="Batch size for processing the data",
+                      help="Batch size for processing the data. Increase this value to maximize GPU utilization (GPU-Util). If GPU-Util reaches 100% consistently, you have found the optimal batch size; increasing it further may cause torch.OutOfMemoryError. This does not affect the values of hidden states.",
                       default=4)
   
   parser.add_argument('--output_path', type=str,
@@ -42,6 +48,7 @@ def parse_args() -> Args:
   return {
     "models_path": args.models_path,
     "model_name": args.model_name,
+    "data_file_path": args.data_file_path,
     "data_path": args.data_path,
     "data_name": args.data_name,
     "data_sample_size": args.data_sample_size,
