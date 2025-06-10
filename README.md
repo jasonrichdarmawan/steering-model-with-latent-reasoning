@@ -1,7 +1,7 @@
-# How to run
+# How to save hidden states
 
 ```shell
-$ python -m experiments.save_hidden_states
+$ python experiments/save_hidden_states/main.py
 ```
 
 # How to test
