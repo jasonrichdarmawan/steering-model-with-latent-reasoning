@@ -87,7 +87,7 @@ os.makedirs(args['output_path'], exist_ok=True)
 
 torch.save(
   hidden_states_cache, 
-  os.path.join(args['output_path'], f'{args["model_name"]}_hidden_states.pt')
+  os.path.join(args['output_path'], f'{args["model_name"]}_hidden_states_cache.pt')
 )
 
 # %%
