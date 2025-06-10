@@ -1,6 +1,17 @@
 # %%
 
-if False:
+import os
+import sys
+
+# To be able to import modules from the shs_utils
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if project_root not in sys.path:
+  print(f"Adding project root to sys.path: {project_root}")
+  sys.path.insert(0, project_root)
+
+# %%
+
+if True:
   import sys
   from importlib import reload
 
@@ -14,18 +25,6 @@ if False:
   reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
   reload(sys.modules.get('utils.cache_hidden_states', sys))
   reload(sys.modules.get('utils', sys))
-
-# %%
-
-import os
-import sys
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if project_root not in sys.path:
-  print(f"Adding project root to sys.path: {project_root}")
-  sys.path.insert(0, project_root)
-
-# %%
 
 from shs_utils import parse_args
 

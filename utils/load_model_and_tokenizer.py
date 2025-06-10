@@ -14,11 +14,12 @@ def load_model_and_tokenizer(model_path: str,
   tokenizer = load_tokenizer(model_path, 
                              model_name)
 
-  model.to("cuda")
-
   return model, tokenizer
 
 def load_model(model_path: str, model_name: str):
+  """
+  TODO: verify multi-GPU support
+  """
 
   torch_dtype = torch.float32
   trust_remote_code = True
@@ -31,10 +32,13 @@ def load_model(model_path: str, model_name: str):
       # Use custom code for Huginn models
       trust_remote_code = False
 
+  # device_map is important because Huginn model
+  # use torch_dtype=torch.bfloat16
   model = AutoModelForCausalLM.from_pretrained(
     join(model_path, model_name),
     torch_dtype=torch_dtype,
     trust_remote_code=trust_remote_code,
+    device_map="auto"
   )
 
   return model
