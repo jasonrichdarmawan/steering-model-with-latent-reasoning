@@ -12,7 +12,9 @@ def cache_hidden_states(data,
   n_layers_to_cache = list(range(n_layers))
 
   hidden_states_cache = {
-    index: torch.empty((0, n_embd))
+    index: torch.empty(
+      (0, n_embd), dtype=model.dtype,
+    )
     for index in n_layers_to_cache
   }
 

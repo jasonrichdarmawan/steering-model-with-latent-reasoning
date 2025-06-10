@@ -103,10 +103,11 @@ output = load_hidden_states_cache(
 
 output[args['data_name']] = hidden_states_cache
 
-print(f"Saving hidden states cache to {os.path.join(args['output_path'], f'{args['model_name']}_hidden_states_cache.pt')}")
-torch.save(
-  output, 
-  os.path.join(args['output_path'], f'{args["model_name"]}_hidden_states_cache.pt')
-)
+# %%
+
+output_file_path = os.path.join(args['output_path'], f"{args['model_name']}_hidden_states_cache.pt")
+
+print(f"Saving hidden states cache to {output_file_path}")
+torch.save(output, output_file_path)
 
 # %%
