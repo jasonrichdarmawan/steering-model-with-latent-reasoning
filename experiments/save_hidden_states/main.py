@@ -24,6 +24,7 @@ if False:
   reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
   reload(sys.modules.get('utils.cache_hidden_states', sys))
+  reload(sys.modules.get('utils.load_hidden_states_cache', sys))
   reload(sys.modules.get('utils', sys))
 
 from shs_utils import parse_args
@@ -38,7 +39,7 @@ import torch
 
 # %%
 
-if True:
+if False:
   print("Programatically setting sys.argv for testing purposes.")
   sys.argv = [
     'extract_hidden_states.py',
@@ -47,7 +48,7 @@ if True:
 
     '--data_file_path', '/root/autodl-fs/datasets/mmlu-pro-3000samples.json',
     # '--data_path', '/root/autodl-fs/datasets',
-    # '--data_name', 'mmlu-pro',
+    '--data_name', 'mmlu-pro_3000samples',
 
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
@@ -94,13 +95,15 @@ os.makedirs(args['output_path'], exist_ok=True)
 # %%
 
 output = load_hidden_states_cache(
-  hidden_states_cache_file_path=args['output_path'] + f'/{args["model_name"]}_hidden_states_cache.pt',
+  hidden_states_cache_path=args['output_path'],
+  model_name=args['model_name']
 )
 
 # %%
 
 output[args['data_name']] = hidden_states_cache
 
+print(f"Saving hidden states cache to {os.path.join(args['output_path'], f'{args['model_name']}_hidden_states_cache.pt')}")
 torch.save(
   output, 
   os.path.join(args['output_path'], f'{args["model_name"]}_hidden_states_cache.pt')
