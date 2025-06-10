@@ -48,7 +48,7 @@ if False:
 
     '--data_file_path', '/root/autodl-fs/datasets/mmlu-pro-3000samples.json',
     # '--data_path', '/root/autodl-fs/datasets',
-    '--data_name', 'mmlu-pro_3000samples',
+    '--data_name', 'mmlu-pro-3000samples',
 
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
