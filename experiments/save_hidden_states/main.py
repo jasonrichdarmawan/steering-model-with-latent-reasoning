@@ -23,6 +23,7 @@ if False:
   reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
   reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
+  reload(sys.modules.get('utils.load_json_dataset', sys))
   reload(sys.modules.get('utils.cache_hidden_states', sys))
   reload(sys.modules.get('utils.load_hidden_states_cache', sys))
   reload(sys.modules.get('utils', sys))
@@ -31,6 +32,7 @@ from shs_utils import parse_args
 
 from utils import use_deterministic_algorithms
 from utils import load_model_and_tokenizer
+from utils import load_json_dataset
 from utils import load_and_sample_test_dataset
 from utils import cache_hidden_states
 from utils import load_hidden_states_cache
@@ -72,12 +74,21 @@ model, tokenizer = load_model_and_tokenizer(
 
 # %%
 
-sampled_data = load_and_sample_test_dataset(
-  data_file_path=args['data_file_path'],
-  data_path=args['data_path'],
-  data_name=args['data_name'],
-  sample_size=args['data_sample_size']
-)
+if args['data_file_path']:
+  print(f"Loading dataset from file: {args['data_file_path']}")
+  sampled_data = load_json_dataset(
+    file_path=args['data_file_path'],
+    sample_size=args.get('data_sample_size', None)
+  )
+elif args['data_path'] and args['data_name']:
+  print(f"Loading dataset from path: {args['data_path']}, name: {args['data_name']}")
+  sampled_data = load_and_sample_test_dataset(
+    data_path=args['data_path'],
+    data_name=args['data_name'],
+    sample_size=args.get('data_sample_size', None)
+  )
+else:
+  raise ValueError("Either data_file_path must be provided or both data_path and data_name must be specified.")
 
 # %%
 

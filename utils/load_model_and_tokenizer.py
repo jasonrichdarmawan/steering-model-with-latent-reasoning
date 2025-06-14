@@ -1,7 +1,11 @@
 from os.path import join
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+  AutoModelForCausalLM, 
+  AutoTokenizer, 
+  PreTrainedTokenizerFast
+)
 
 # Use custom code for Huginn models
 from models import recpre # type: ignore
@@ -11,8 +15,10 @@ def load_model_and_tokenizer(model_path: str,
   model = load_model(model_path, 
                      model_name)
 
-  tokenizer = load_tokenizer(model_path, 
-                             model_name)
+  tokenizer: PreTrainedTokenizerFast = load_tokenizer(
+    model_path,
+    model_name
+  )
 
   return model, tokenizer
 
