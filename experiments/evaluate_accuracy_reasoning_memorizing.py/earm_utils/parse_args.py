@@ -14,6 +14,9 @@ class Args(TypedDict):
   batch_size: int
 
   with_intervention: bool
+  layer_indices: list[int]
+  with_pre_hook: bool
+  with_post_hook: bool
   scale: float
 
 def parse_args() -> Args:
@@ -45,6 +48,12 @@ def parse_args() -> Args:
 
   parser.add_argument('--with-intervention', action="store_true",
                       help="Whether to apply the intervention for reasoning and memorization accuracy evaluation")
+  parser.add_argument('--layer_indices', type=int, nargs='+',
+                      help="Indices of the layers to apply the intervention",)
+  parser.add_argument('--with_pre_hook', action="store_true",
+                      help="Whether to use pre-hook for the intervention")
+  parser.add_argument('--with_post_hook', action="store_true",
+                      help="Whether to use post-hook for the intervention")
   parser.add_argument('--scale', type=float, default=0.1,
                       help="Scale factor for the projection direction")
 
@@ -63,5 +72,8 @@ def parse_args() -> Args:
     "batch_size": args.batch_size,
     
     "with_intervention": args.with_intervention,
+    "layer_indices": args.layer_indices,
+    "with_pre_hook": args.with_pre_hook,
+    "with_post_hook": args.with_post_hook,
     "scale": args.scale,
   }

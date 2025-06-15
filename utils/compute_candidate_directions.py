@@ -7,7 +7,7 @@ def compute_candidate_directions(
   reasoning_indices: list[int],
   memorizing_indices: list[int],
   dtype: torch.dtype
-):
+) -> Float[Tensor, "n_layers n_embd"]:
   """
   Tensor.to(torch.float64) is used because we 
   follow the [original implementation](https://github.com/yihuaihong/Linear_Reasoning_Features/blob/f23f2547862a2c1b57f1cfa3c547776cb38f762a/reasoning_representation/Intervention/utils.py).

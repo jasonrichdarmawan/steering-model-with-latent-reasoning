@@ -40,6 +40,7 @@ from utils import compute_candidate_directions
 from utils import prepare_fewshot_prompts
 from utils import prepare_queries
 from utils import generate_sentences
+from utils import ProjectionHookConfig
 from utils import set_activations_hooks, remove_hooks
 from utils import set_model_predict_correctness
 
@@ -68,6 +69,9 @@ if True:
     '--batch_size', '1',
 
     '--with_intervention',
+    '--layer_indices', '66',
+    '--with_pre_hook',
+    '--with_post_hook',
     '--scale', '0.1'
   ]
 
@@ -112,7 +116,6 @@ else:
 # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
 match args['test_data_name']:
   case 'mmlu-pro-3000samples':
-
     test_dataset = random.sample(mmlu_pro_3000samples_dataset, 200)
 
     reasoning_indices = [index for index, sample in enumerate(test_dataset) if sample['memory_reason_score'] > 0.5]
@@ -164,98 +167,101 @@ entries_batched = [
 
 # %%
 
-def _compute_accuracy(entries: list[str], label: str):
+def _compute_accuracy(
+  entries: list[str],
+  label: str
+):
   total = len(entries)
   if total == 0:
     return None
   correct = sum(entry.get("model_predict_correctness", False) for entry in entries)
   accuracy = correct / total
-  print(f"Layer {layer} - {label} Subset Accuracy: {accuracy:.4f} ({correct}/{total})")
+  print(f"{label} Accuracy: {accuracy:.4f} ({correct}/{total})")
   return accuracy
 
-n_layers: int = None
+if args['with_intervention']:
+  projection_hook_config = ProjectionHookConfig(
+    layer_indices=args['layer_indices'],
+    candidate_directions=candidate_directions,
+    pre_hook=args['with_pre_hook'],
+    post_hook=args['with_post_hook'],
+    scale=args['scale']
+  )
+
+  hooks = set_activations_hooks(
+    model=model,
+    candidate_directions=candidate_directions,
+    config=projection_hook_config,
+  )
+
 match model.config.model_type:
   case name if name.startswith("huginn_"):
-    n_layers = model.config.effective_expected_depth
-  case _:
-    raise ValueError(f"Unsupported model type: {model.config.model_type}")
-
-for layer in range(n_layers):
-  if args['with_intervention']:
-    # TODO: layer_name
-    hooks = set_activations_hooks(
-      model=model,
-      layer_name="",
-      direction=candidate_directions[layer],
-      scale=args['scale']
+    """
+    Reference:
+    [1] https://github.com/seal-rg/recurrent-pretraining/blob/9f84159bc548f4fe75a577d71575c35ef80e1977/examples/inference_demo.ipynb
+    [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
+    """
+    generation_config = GenerationConfig(
+      max_new_tokens=200,
+      stop_strings=["<|end_text|>", "<|end_turn|>"],
+      do_sample=False,
+      temperature=None,
+      top_p=None,
+      min_p=None,
+      return_dict_in_generate=True,
+      eos_token_id=65505,
+      bos_token_id=65504,
+      pad_token_id=65509
     )
 
-  match model.config.model_type:
-    case name if name.startswith("huginn_"):
-      """
-      Reference: 
-      [1] https://github.com/seal-rg/recurrent-pretraining/blob/9f84159bc548f4fe75a577d71575c35ef80e1977/examples/inference_demo.ipynb
-      [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
-      """
-      config = GenerationConfig(
-        max_new_tokens=200,
-        stop_strings=["<|end_text|>", "<|end_turn|>"],
-        do_sample=False,
-        temperature=None,
-        top_p=None,
-        min_p=None,
-        return_dict_in_generate=True,
-        eos_token_id=65505,
-        bos_token_id=65504,
-        pad_token_id=65509
+    for queries_batch, entries_batch in tqdm(
+      zip(queries_batched, entries_batched)
+    ):
+      responses = generate_sentences(
+        model=model,
+        tokenizer=tokenizer,
+        text=queries_batch,
+        config=generation_config,
       )
-  
-      for queries_batch, entries_batch in tqdm(
-        zip(queries_batched, entries_batched)
-      ):
-        responses = generate_sentences(
-          model=model,
-          tokenizer=tokenizer,
-          text=queries_batch,
-          config=config,
-        )
 
-        set_model_predict_correctness(
-          entries=entries_batch,
-          queries=queries_batch,
-          responses=responses,
-          test_dataset_name=args['test_data_name']
-        )
-
-        torch.cuda.empty_cache()
-    case _:
-      raise ValueError(f"Unsupported model type: {model.config.model_type}")
-      
-  if args['with_intervention']:
-    remove_hooks(hooks)
-
-  match args['test_data_name']:
-    case 'mmlu-pro-3000samples':
-      reasoning_entries = [
-        entry 
-        for entry in entries_batch 
-        if entry['memory_reason_score'] > 0.5
-      ]
-      memorizing_entries = [
-        entry 
-        for entry in entries_batch 
-        if entry['memory_reason_score'] <= 0.5
-      ]
-
-      _compute_accuracy(
-        entries=reasoning_entries,
-        label="Reasoning"
+      set_model_predict_correctness(
+        entries=entries_batch,
+        queries=queries_batch,
+        responses=responses,
+        test_dataset_name=args['test_data_name']
       )
-      _compute_accuracy(
-        entries=memorizing_entries,
-        label="Memorizing"
-      )
-    case _:
-      raise ValueError(f"Unsupported test data name: {args['test_data_name']}")
+
+      torch.cuda.empty_cache()
+  case _:
+    raise ValueError(f"Unsupported model type: {model.config.model_type}")
+    
+if args['with_intervention']:
+  remove_hooks(hooks)
+
+match args['test_data_name']:
+  case 'mmlu-pro-3000samples':
+    reasoning_entries = [
+      entry
+      for batch in entries_batched
+      for entry in batch
+      if entry['memory_reason_score'] > 0.5
+    ]
+    memorizing_entries = [
+      entry
+      for batch in entries_batched
+      for entry in batch
+      if entry['memory_reason_score'] <= 0.5
+    ]
+
+    _compute_accuracy(
+      entries=reasoning_entries,
+      label=f"Layer {args['layer_indices']} - Reasoning Subset"
+    )
+    _compute_accuracy(
+      entries=memorizing_entries,
+      label=f"Layer {args['layer_indices']} - Memorizing Subset"
+    )
+  case _:
+    raise ValueError(f"Unsupported test data name: {args['test_data_name']}")
 
 # %%
