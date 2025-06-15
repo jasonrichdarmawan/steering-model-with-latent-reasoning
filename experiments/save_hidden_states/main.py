@@ -44,7 +44,7 @@ import torch
 if False:
   print("Programatically setting sys.argv for testing purposes.")
   sys.argv = [
-    'extract_hidden_states.py',
+    'main.py',
     '--models_path', '/root/autodl-fs/transformers',
     '--model_name', 'huginn-0125',
 
