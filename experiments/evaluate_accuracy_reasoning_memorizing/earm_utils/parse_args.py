@@ -43,13 +43,14 @@ def parse_args() -> Args:
                       help="Whether to use few-shot prompts in the queries")
   parser.add_argument('--with_cot', action="store_true",
                       help="Whether to use chain-of-thought (CoT) reasoning in the prompts")
-  parser.add_argument('--batch_size', type=int, default=8,
+  parser.add_argument('--batch_size', type=int, default=1,
                       help="Batch size for processing the test dataset")
 
   parser.add_argument('--with-intervention', action="store_true",
                       help="Whether to apply the intervention for reasoning and memorization accuracy evaluation")
   parser.add_argument('--layer_indices', type=int, nargs='+',
-                      help="Indices of the layers to apply the intervention",)
+                      help="Indices of the layers to apply the intervention",
+                      default=[66])
   parser.add_argument('--with_pre_hook', action="store_true",
                       help="Whether to use pre-hook for the intervention")
   parser.add_argument('--with_post_hook', action="store_true",

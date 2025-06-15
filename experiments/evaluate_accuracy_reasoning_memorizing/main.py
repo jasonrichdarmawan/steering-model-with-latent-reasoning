@@ -51,7 +51,7 @@ import torch
 
 # %%
 
-if True:
+if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")

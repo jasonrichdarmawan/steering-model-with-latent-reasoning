@@ -4,6 +4,12 @@
 $ python experiments/save_hidden_states/main.py
 ```
 
+# How to evaluate accuracy reasoning and memorization
+
+```shell
+$ python experiments/evaluate_accuracy_reasoning_memorizing/main.py
+```
+
 # How to test
 
 ```shell
