@@ -286,7 +286,12 @@ class GatedMLP(torch.nn.Module):
 class SandwichBlock(torch.nn.Module):
     expanded = False
 
-    def __init__(self, config: RavenConfig, layer_id: int) -> None:
+    def __init__(
+        self,
+        config: RavenConfig,
+        layer_id: int,
+        depth_indices: list[int],
+    ) -> None:
         super().__init__()
         self.norm_1 = RMSNorm(config.n_embd, eps=config.norm_eps)
         self.attn = CausalSelfAttention(config)
@@ -295,6 +300,7 @@ class SandwichBlock(torch.nn.Module):
         self.norm_3 = RMSNorm(config.n_embd, eps=config.norm_eps)
         self.norm_4 = RMSNorm(config.n_embd, eps=config.norm_eps)
         self.layer_id = layer_id
+        self.depth_indices = depth_indices
 
     def forward(
         self,
@@ -320,14 +326,37 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         self.config = config
 
         # Transformer layers
-        prelude = torch.nn.ModuleList(SandwichBlock(config, layer_id=i) for i in range(config.n_layers_in_prelude))
+        prelude = torch.nn.ModuleList(
+            SandwichBlock(
+                config, 
+                layer_id=i,
+                depth_indices=[i]
+            ) 
+            for i in range(config.n_layers_in_prelude)
+        )
         adapter = torch.nn.Linear(config.n_embd * 2, config.n_embd, bias=config.bias)
+        o = config.n_layers_in_prelude + config.n_layers_in_recurrent_block * config.mean_recurrence
         core_block = torch.nn.ModuleList(
-            SandwichBlock(config, layer_id=i + config.n_layers_in_prelude)
+            SandwichBlock(
+                config, 
+                layer_id=i + config.n_layers_in_prelude,
+                depth_indices=list(
+                    range(
+                        config.n_layers_in_prelude, 
+                        o, 
+                        config.n_layers_in_recurrent_block
+                    )
+                )
+            )
             for i in range(config.n_layers_in_recurrent_block)
         )
-        o = config.n_layers_in_prelude + config.n_layers_in_recurrent_block * config.mean_recurrence
-        coda = torch.nn.ModuleList(SandwichBlock(config, layer_id=i + o) for i in range(config.n_layers_in_coda))
+        coda = torch.nn.ModuleList(
+            SandwichBlock(
+                config, 
+                layer_id=i + o,
+                depth_indices=[i + o]
+            ) for i in range(config.n_layers_in_coda)
+        )
 
         self.transformer = torch.nn.ModuleDict(
             dict(
@@ -494,15 +523,31 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
             for step in range(num_steps_no_grad):
                 xk = x
                 x, block_idx, attn_maps, all_hidden_states = self.core_block_forward(
-                    xk, input_embeds, freqs_cis, mask, past_key_values, block_idx, attn_maps, return_attn,
-                    return_head=return_head, all_hidden_states=all_hidden_states
+                    x=xk, 
+                    input_embeds=input_embeds, 
+                    freqs_cis=freqs_cis,
+                    mask=mask, 
+                    past_key_values=past_key_values, 
+                    block_idx=block_idx, 
+                    attn_maps=attn_maps, 
+                    return_attn=return_attn,
+                    return_head=return_head, 
+                    all_hidden_states=all_hidden_states,
                 )
 
         for step in range(num_steps_with_grad):
             xk = x
             x, block_idx, attn_maps, all_hidden_states = self.core_block_forward(
-                xk, input_embeds, freqs_cis, mask, past_key_values, block_idx, attn_maps, return_attn,
-                return_head=return_head, all_hidden_states=all_hidden_states
+                x=xk, 
+                input_embeds=input_embeds, 
+                freqs_cis=freqs_cis,
+                mask=mask,
+                past_key_values=past_key_values,
+                block_idx=block_idx, 
+                attn_maps=attn_maps, 
+                return_attn=return_attn,
+                return_head=return_head, 
+                all_hidden_states=all_hidden_states,
             )
         return self.transformer.ln_f(x), num_steps_no_grad, num_steps_with_grad, xk.detach(), block_idx, attn_maps, all_hidden_states
 
@@ -521,7 +566,14 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
     ):
         x = self.transformer.adapter(torch.cat([x, input_embeds.to(x.device)], dim=-1))
         for idx, block in enumerate(self.transformer.core_block, start=1):
-            x, attn_map = block(x, freqs_cis, block_idx + idx, mask, past_key_values, return_attn=return_attn)
+            x, attn_map = block(
+                x=x,
+                freqs_cis=freqs_cis, 
+                step_idx=block_idx + idx, 
+                mask=mask, 
+                past_key_values=past_key_values, 
+                return_attn=return_attn,
+            )
             attn_maps[block_idx + idx] = attn_map
             if return_head:
                 all_hidden_states += (x,)

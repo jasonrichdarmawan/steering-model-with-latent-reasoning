@@ -53,7 +53,7 @@ def parse_args() -> Args:
   parser.add_argument('--max_new_tokens', type=int, default=200,
                       help="Maximum number of new tokens to generate in the response")
 
-  parser.add_argument('--with-intervention', action="store_true",
+  parser.add_argument('--with_intervention', action="store_true",
                       help="Whether to apply the intervention for reasoning and memorization accuracy evaluation")
   parser.add_argument('--layer_indices', type=int, nargs='+',
                       help="Indices of the layers to apply the intervention",

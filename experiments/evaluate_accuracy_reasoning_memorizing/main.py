@@ -125,6 +125,7 @@ if args['with_intervention']:
     dtype=model.dtype
   )
 else:
+  print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
   candidate_directions = None
 
 # %%
@@ -152,6 +153,7 @@ if args['with_fewshot_prompts']:
     with_cot=args['with_cot'],
   )
 else:
+  print("No few-shot prompts will be used for the test dataset.")
   fewshot_prompts = None
 
 # %%
@@ -199,6 +201,7 @@ def _compute_accuracy(
   return accuracy
 
 if args['with_intervention']:
+  print("Setting up projection hooks for the model.")
   projection_hook_config = ProjectionHookConfig(
     layer_indices=args['layer_indices'],
     candidate_directions=candidate_directions,
@@ -212,6 +215,8 @@ if args['with_intervention']:
     candidate_directions=candidate_directions,
     config=projection_hook_config,
   )
+else:
+  print("No intervention hooks set up, proceeding without them.")
 
 match model.config.model_type:
   case name if name.startswith("huginn_"):
