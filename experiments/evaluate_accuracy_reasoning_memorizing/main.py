@@ -234,7 +234,8 @@ match model.config.model_type:
     )
 
     for queries_batch, entries_batch in tqdm(
-      zip(queries_batched, entries_batched)
+      zip(queries_batched, entries_batched),
+      total=len(queries_batched)
     ):
       responses = generate_sentences(
         model=model,
