@@ -24,6 +24,9 @@ if False:
   reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
   reload(sys.modules.get('utils.load_json_dataset', sys))
+  reload(sys.modules.get('utils.prepare_queries', sys))
+  reload(sys.modules.get('utils.get_n_layers', sys))
+  reload(sys.modules.get('utils.get_n_embd', sys))
   reload(sys.modules.get('utils.cache_hidden_states', sys))
   reload(sys.modules.get('utils.load_hidden_states_cache', sys))
   reload(sys.modules.get('utils', sys))
@@ -34,28 +37,35 @@ from utils import use_deterministic_algorithms
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import load_and_sample_test_dataset
+from utils import prepare_queries
+from utils import get_n_layers
+from utils import get_n_embd
 from utils import cache_hidden_states
 from utils import load_hidden_states_cache
 
 import torch
+from torch import Tensor
+from jaxtyping import Float
+from tqdm import tqdm
 
 # %%
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
+  root_path = "/home/npu-tao/jason"
   sys.argv = [
     'main.py',
-    '--models_path', '/root/autodl-fs/transformers',
+    '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
 
-    '--data_file_path', '/root/autodl-fs/datasets/mmlu-pro-3000samples.json',
-    # '--data_path', '/root/autodl-fs/datasets',
+    '--data_file_path', f'{root_path}/datasets/mmlu-pro-3000samples.json',
+    # '--data_path', f'{root_path}/datasets',
     '--data_name', 'mmlu-pro-3000samples',
 
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
 
-    '--output_path', '/root/autodl-fs/experiments/hidden_states_cache',
+    '--output_path', f'{root_path}/experiments/hidden_states_cache',
   ]
 
 args = parse_args()
@@ -92,16 +102,45 @@ else:
 
 # %%
 
-hidden_states_cache = cache_hidden_states(
+queries = prepare_queries(
+  model_name=model.config.model_type,
   data=sampled_data,
-  model=model,
+  data_name=args['data_name'],
   tokenizer=tokenizer,
-  data_batch_size=args['data_batch_size'],
+  system_prompt="You are a helpful assistant.",
+  fewshot_prompts=None,
+  with_cot=False,
 )
+
+queries_batched = [
+  queries[i:i + args['data_batch_size']]
+  for i in range(
+    0, len(queries), args['data_batch_size']
+  )
+]
 
 # %%
 
-os.makedirs(args['output_path'], exist_ok=True)
+n_layers = get_n_layers(model)
+n_embd = get_n_embd(model)
+
+hidden_states_cache: dict[
+  int, Float[Tensor, "seq_len n_embd"]
+] = {
+  index: torch.empty(
+    (0, n_embd), dtype=model.dtype,
+  )
+  for index in range(n_layers)
+}
+
+for queries_batch in tqdm(queries_batched):
+  hidden_states_cache = cache_hidden_states(
+    model=model,
+    tokenizer=tokenizer,
+    queries_batch=queries_batch,
+    hidden_states_cache=hidden_states_cache
+  )
+  torch.cuda.empty_cache()
 
 # %%
 
@@ -116,6 +155,7 @@ output[args['data_name']] = hidden_states_cache
 
 # %%
 
+os.makedirs(args['output_path'], exist_ok=True)
 output_file_path = os.path.join(args['output_path'], f"{args['model_name']}_hidden_states_cache.pt")
 
 print(f"Saving hidden states cache to {output_file_path}")

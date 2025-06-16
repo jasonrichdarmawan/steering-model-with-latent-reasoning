@@ -1,13 +1,33 @@
 # How to save hidden states
 
 ```shell
-$ python experiments/save_hidden_states/main.py
+WORKSPACE_PATH="/home/npu-tao/jason"
+
+python experiments/save_hidden_states/main.py \
+--models_path "$WORKSPACE_PATH/transformers" \
+--model_name huginn-0125 \
+--data_file_path "$WORKSPACE_PATH/datasets/mmlu-pro-3000samples.json" \
+--data_name mmlu-pro-3000samples \
+--output_path "$WORKSPACE_PATH/experiments/hidden_states_cache"
 ```
 
 # How to evaluate accuracy reasoning and memorization
 
-```shell
-$ python experiments/evaluate_accuracy_reasoning_memorizing/main.py
+```bash
+WORKSPACE_PATH="/home/npu-tao/jason"
+
+python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
+--models_path "$WORKSPACE_PATH/transformers" \
+--model_name huginn-0125 \
+--hidden_states_cache_path "$WORKSPACE_PATH/experiments/hidden_states_cache" \
+--mmlu_pro_3000samples_data_file_path "$WORKSPACE_PATH/datasets/mmlu-pro-3000samples.json" \
+--test_data_path "$WORKSPACE_PATH/datasets" \
+--test_data_name mmlu-pro-3000samples \
+--with_fewshot_prompts \
+--batch_size 1 \
+--with_intervention \
+--layer_indices 66 \
+--with_post_hook
 ```
 
 # How to test

@@ -1,10 +1,10 @@
 import torch
 from torch import nn
-from transformers import GenerationConfig, PreTrainedTokenizerFast
+from transformers import GenerationConfig, PreTrainedTokenizerBase
 
 def generate_sentences(
   model: nn.Module,
-  tokenizer: PreTrainedTokenizerFast,
+  tokenizer: PreTrainedTokenizerBase,
   text: list[str],
   config: GenerationConfig,
 ):

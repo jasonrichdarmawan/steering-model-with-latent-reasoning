@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if True:
+if False:
   import sys
   from importlib import reload
 
@@ -20,6 +20,7 @@ if True:
   reload(sys.modules.get('earm_utils.parse_args', sys))
   reload(sys.modules.get('earm_utils', sys))
 
+  reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
   reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.load_hidden_states_cache', sys))
   reload(sys.modules.get('utils.load_json_dataset', sys))
@@ -33,6 +34,7 @@ if True:
 
 from earm_utils import parse_args
 
+from utils import use_deterministic_algorithms
 from utils import load_model_and_tokenizer
 from utils import load_hidden_states_cache
 from utils import load_json_dataset
@@ -55,27 +57,35 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
+  root_path = "/home/npu-tao/jason"
   sys.argv = [
     'main.py',
-    '--models_path', '/root/autodl-fs/transformers',
+    '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
 
-    '--hidden_states_cache_path', '/root/autodl-fs/experiments/hidden_states_cache',
+    '--hidden_states_cache_path', f'{root_path}/experiments/hidden_states_cache',
+    '--mmlu_pro_3000samples_data_file_path', f'{root_path}/datasets/mmlu-pro-3000samples.json',
 
-    '--test_data_path', '/root/autodl-fs/datasets',
+    '--test_data_path', f'{root_path}/datasets',
     '--test_data_name', 'mmlu-pro-3000samples',
     '--with_fewshot_prompts',
-    '--with_cot',
+    # '--with_cot',
     '--batch_size', '1',
+    '--max_new_tokens', '200',
 
     '--with_intervention',
     '--layer_indices', '66',
-    '--with_pre_hook',
+    # '--with_pre_hook',
     '--with_post_hook',
     '--scale', '0.1'
   ]
 
 args = parse_args()
+
+# %%
+
+print("Setting deterministic algorithms for reproducibility.")
+use_deterministic_algorithms()
 
 # %%
 
@@ -87,15 +97,22 @@ model, tokenizer = load_model_and_tokenizer(
 # %%
 
 mmlu_pro_3000samples_dataset = load_json_dataset(
-  file_path='/root/autodl-fs/datasets/mmlu-pro-3000samples.json',
+  file_path=args['mmlu_pro_3000samples_data_file_path'],
 )
 
-reasoning_indices = [index for index, sample in enumerate(mmlu_pro_3000samples_dataset) if sample['memory_reason_score'] > 0.5]
-memorizing_indices = [index for index, sample in enumerate(mmlu_pro_3000samples_dataset) if sample['memory_reason_score'] <= 0.5]
+reasoning_indices = [
+  index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+  if sample['memory_reason_score'] > 0.5
+]
+memorizing_indices = [
+  index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+  if sample['memory_reason_score'] <= 0.5
+]
 
 # %%
 
 if args['with_intervention']:
+  print("Loading hidden states cache for intervention.")
   hidden_states_cache = load_hidden_states_cache(
     hidden_states_cache_path=args['hidden_states_cache_path'],
     model_name=args['model_name']
@@ -116,6 +133,7 @@ else:
 # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
 match args['test_data_name']:
   case 'mmlu-pro-3000samples':
+    print("Loading MMLU-Pro 3000 samples dataset for testing.")
     test_dataset = random.sample(mmlu_pro_3000samples_dataset, 200)
 
     reasoning_indices = [index for index, sample in enumerate(test_dataset) if sample['memory_reason_score'] > 0.5]
@@ -127,6 +145,7 @@ match args['test_data_name']:
 # %%
 
 if args['with_fewshot_prompts']:
+  print("Preparing few-shot prompts for the test dataset.")
   fewshot_prompts = prepare_fewshot_prompts(
     data_path=args['test_data_path'],
     data_name=args['test_data_name'],
@@ -137,9 +156,9 @@ else:
 
 # %%
 
-queries, entries = prepare_queries(
-  model_name=args['model_name'],
-  test_dataset=test_dataset,
+queries = prepare_queries(
+  model_name=model.config.model_type,
+  data=test_dataset,
   data_name=args['test_data_name'],
   tokenizer=tokenizer,
   system_prompt="You are a helpful assistant.",
@@ -157,10 +176,10 @@ queries_batched = [
 ]
 
 entries_batched = [
-  entries[i:i + args['batch_size']]
+  test_dataset[i:i + args['batch_size']]
   for i in range(
     0,
-    len(entries),
+    len(test_dataset),
     args['batch_size']
   )
 ]
@@ -202,7 +221,7 @@ match model.config.model_type:
     [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
     """
     generation_config = GenerationConfig(
-      max_new_tokens=200,
+      max_new_tokens=args['max_new_tokens'],
       stop_strings=["<|end_text|>", "<|end_turn|>"],
       do_sample=False,
       temperature=None,

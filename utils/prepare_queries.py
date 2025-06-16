@@ -1,22 +1,26 @@
-from utils import format_options
+from utils.format_options import format_options
 
-from transformers import PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerBase
 
 def prepare_queries(
   model_name: str,
-  test_dataset,
+  data,
   data_name: str,
-  tokenizer: PreTrainedTokenizerFast | None = None,
+  tokenizer: PreTrainedTokenizerBase | None = None,
   system_prompt: str | None = None,
   fewshot_prompts: dict[str, list[str]] | None = None,
   with_cot: bool = True,
 ):
+  """
+  model_name: The identifier for the model architecture, typically obtained from PreTrainedModel.config.model_type. 
+    This determines how the query is formatted and which prompt templates or special handling are applied 
+    (e.g., chat-style formatting for models starting with "huginn-").
+  """
   queries: list[str] = []
-  entries: list[str] = []
 
   match data_name:
     case "mmlu-pro" | "mmlu-pro-3000samples":
-      for entry in test_dataset:
+      for entry in data:
         selected_fewshot_prompts = fewshot_prompts
         if selected_fewshot_prompts is not None:
           category = entry['category']
@@ -26,7 +30,7 @@ def prepare_queries(
         options = format_options(entry['options'])
         question_content = f"{question}\n{options}"
 
-        query = _generate_final_query(
+        query = generate_query(
           model_name=model_name,
           question_content=question_content,
           tokenizer=tokenizer,
@@ -36,16 +40,15 @@ def prepare_queries(
         )
 
         queries.append(query)
-        entries.append(entry)
     case _:
       raise ValueError(f"Unsupported data name: {data_name}")
 
-  return queries, entries
+  return queries
 
-def _generate_final_query(
+def generate_query(
   model_name: str,
   question_content: str,
-  tokenizer: PreTrainedTokenizerFast | None = None,
+  tokenizer: PreTrainedTokenizerBase | None = None,
   system_prompt: str | None = None,
   fewshot_prompts: list[str] | None = None,
   with_cot: bool = True
@@ -54,7 +57,9 @@ def _generate_final_query(
   Constructs the final query string for the model based on the provided parameters.
 
   Args:
-    model_name: The name of the model to determine formatting logic.
+    model_name: The identifier for the model architecture, typically obtained from PreTrainedModel.config.model_type. 
+      This determines how the query is formatted and which prompt templates or special handling are applied 
+      (e.g., chat-style formatting for models starting with "huginn-").
     question_content: The main content of the question to be asked (do NOT add "Q: " prefix; formatting is handled here).
     tokenizer: Optional tokenizer for formatting chat templates.
     system_prompt: Optional system prompt to guide the model's behavior.
@@ -74,7 +79,7 @@ def _generate_final_query(
   query: str = ""
 
   match model_name:
-    case name if name.startswith("huginn-"):
+    case name if name.startswith("huginn_"):
       """
       Reference: 
       [1] https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/examples/inference_demo.ipynb

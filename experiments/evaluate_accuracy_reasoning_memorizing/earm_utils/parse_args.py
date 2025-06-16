@@ -6,12 +6,14 @@ class Args(TypedDict):
   model_name: str
   
   hidden_states_cache_path: str
+  mmlu_pro_3000samples_data_file_path: str
 
   test_data_path: str
   test_data_name: str
   with_fewshot_prompts: bool
   with_cot: bool
   batch_size: int
+  max_new_tokens: int
 
   with_intervention: bool
   layer_indices: list[int]
@@ -32,6 +34,9 @@ def parse_args() -> Args:
   parser.add_argument('--hidden_states_cache_path', type=str,
                       help="Path to the cached hidden states",
                       default="/root/autodl-fs/experiments/hidden_states_cache")
+  parser.add_argument('--mmlu_pro_3000samples_data_file_path', type=str,
+                      help="Path to the MMLU Pro 3000 samples dataset file",
+                      default="/root/autodl-fs/datasets/mmlu-pro-3000samples.json")
   
   parser.add_argument('--test_data_path', type=str,
                       help="Path to the root directory containing multiple data folders",
@@ -45,6 +50,8 @@ def parse_args() -> Args:
                       help="Whether to use chain-of-thought (CoT) reasoning in the prompts")
   parser.add_argument('--batch_size', type=int, default=1,
                       help="Batch size for processing the test dataset")
+  parser.add_argument('--max_new_tokens', type=int, default=200,
+                      help="Maximum number of new tokens to generate in the response")
 
   parser.add_argument('--with-intervention', action="store_true",
                       help="Whether to apply the intervention for reasoning and memorization accuracy evaluation")
@@ -65,12 +72,14 @@ def parse_args() -> Args:
     "model_name": args.model_name,
     
     "hidden_states_cache_path": args.hidden_states_cache_path,
+    "mmlu_pro_3000samples_data_file_path": args.mmlu_pro_3000samples_data_file_path,
     
     "test_data_path": args.test_data_path,
     "test_data_name": args.test_data_name,
     "with_fewshot_prompts": args.with_fewshot_prompts,
     "with_cot": args.with_cot,
     "batch_size": args.batch_size,
+    "max_new_tokens": args.max_new_tokens,
     
     "with_intervention": args.with_intervention,
     "layer_indices": args.layer_indices,
