@@ -43,13 +43,4 @@ def parse_args() -> Args:
   
   args, _ = parser.parse_known_args()
 
-  return {
-    "models_path": args.models_path,
-    "model_name": args.model_name,
-    "data_file_path": args.data_file_path,
-    "data_path": args.data_path,
-    "data_name": args.data_name,
-    "data_sample_size": args.data_sample_size,
-    "data_batch_size": args.data_batch_size,
-    "output_path": args.output_path,
-  }
+  return args.__dict__

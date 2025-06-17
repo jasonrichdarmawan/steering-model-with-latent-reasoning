@@ -67,23 +67,4 @@ def parse_args() -> Args:
 
   args, _ = parser.parse_known_args()
   
-  return {
-    "models_path": args.models_path,
-    "model_name": args.model_name,
-    
-    "hidden_states_cache_path": args.hidden_states_cache_path,
-    "mmlu_pro_3000samples_data_file_path": args.mmlu_pro_3000samples_data_file_path,
-    
-    "test_data_path": args.test_data_path,
-    "test_data_name": args.test_data_name,
-    "with_fewshot_prompts": args.with_fewshot_prompts,
-    "with_cot": args.with_cot,
-    "batch_size": args.batch_size,
-    "max_new_tokens": args.max_new_tokens,
-    
-    "with_intervention": args.with_intervention,
-    "layer_indices": args.layer_indices,
-    "with_pre_hook": args.with_pre_hook,
-    "with_post_hook": args.with_post_hook,
-    "scale": args.scale,
-  }
+  return args.__dict__
