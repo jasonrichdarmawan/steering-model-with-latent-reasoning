@@ -24,10 +24,27 @@ python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
 --test_data_path "$WORKSPACE_PATH/datasets" \
 --test_data_name mmlu-pro-3000samples \
 --with_fewshot_prompts \
---batch_size 1 \
+--batch_size 4 \
 --with_intervention \
 --layer_indices 66 \
 --with_post_hook
+```
+
+# How to evaluate with lm_eval
+
+```bash
+WORKSPACE_PATH="/home/npu-tao/jason"
+
+python experiments/evaluate_lm_eval/main.py \
+--use_hf_mirror \
+--models_path "$WORKSPACE_PATH/transformers" \
+--model_name huginn-0125 \
+--tasks mmlu \
+--num_fewshot 5 \
+--batch_size 4 \
+--limit 50 \
+--huginn_num_steps 32 \
+--output_path "$WORKSPACE_PATH/experiments/lm_eval_results"
 ```
 
 # How to test
