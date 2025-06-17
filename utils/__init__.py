@@ -13,3 +13,5 @@ from .projection_hook import *
 from .generate_sentences import *
 
 from .set_model_predict_correctness import *
+
+from .huginn_wrapper import *
