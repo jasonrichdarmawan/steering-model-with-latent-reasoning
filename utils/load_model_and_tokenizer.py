@@ -10,19 +10,23 @@ from transformers import (
 # Use custom code for Huginn models
 from models import recpre # type: ignore
 
-def load_model_and_tokenizer(model_path: str, 
-                             model_name: str):
-  model = load_model(model_path, 
-                     model_name)
+def load_model_and_tokenizer(
+  models_path: str, 
+  model_name: str
+):
+  model = load_model(
+    models_path=models_path, 
+    model_name=model_name,
+  )
 
   tokenizer: PreTrainedTokenizerFast = load_tokenizer(
-    model_path,
-    model_name
+    models_path=models_path,
+    model_name=model_name,
   )
 
   return model, tokenizer
 
-def load_model(model_path: str, model_name: str):
+def load_model(models_path: str, model_name: str):
   """
   TODO: verify multi-GPU support
   """
@@ -41,7 +45,7 @@ def load_model(model_path: str, model_name: str):
   # device_map is important because Huginn model
   # use torch_dtype=torch.bfloat16
   model = AutoModelForCausalLM.from_pretrained(
-    join(model_path, model_name),
+    join(models_path, model_name),
     torch_dtype=torch_dtype,
     trust_remote_code=trust_remote_code,
     device_map="auto"
@@ -49,10 +53,12 @@ def load_model(model_path: str, model_name: str):
 
   return model
 
-def load_tokenizer(model_path: str, 
-                   model_name: str):
+def load_tokenizer(
+  models_path: str, 
+  model_name: str,
+):
   tokenizer = AutoTokenizer.from_pretrained(
-    join(model_path, model_name),
+    join(models_path, model_name),
     trust_remote_code=True,
   )
 

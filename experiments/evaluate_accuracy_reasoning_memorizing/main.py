@@ -90,7 +90,7 @@ use_deterministic_algorithms()
 # %%
 
 model, tokenizer = load_model_and_tokenizer(
-  model_path=args['models_path'],
+  models_path=args['models_path'],
   model_name=args['model_name']
 )
 

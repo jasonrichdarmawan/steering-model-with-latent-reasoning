@@ -6,7 +6,7 @@ from utils import load_model_and_tokenizer
 class TestLoadModelAndTokenizer(unittest.TestCase):
   def test_load_model_and_tokenizer(self):
     model, tokenizer = load_model_and_tokenizer(
-      model_path="/root/autodl-fs/transformers",
+      models_path="/root/autodl-fs/transformers",
       model_name="huginn-0125",
     )
     
