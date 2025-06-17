@@ -30,7 +30,7 @@ def prepare_queries(
         options = format_options(entry['options'])
         question_content = f"{question}\n{options}"
 
-        query = generate_query(
+        query = prepare_query(
           model_name=model_name,
           question_content=question_content,
           tokenizer=tokenizer,
@@ -45,7 +45,7 @@ def prepare_queries(
 
   return queries
 
-def generate_query(
+def prepare_query(
   model_name: str,
   question_content: str,
   tokenizer: PreTrainedTokenizerBase | None = None,

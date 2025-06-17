@@ -6,5 +6,5 @@ def format_options(option_texts: list[str]):
   option_labels = ["A", "B", "C", "D", "E", "F", "G", 
                    "H", "I", "J"]
   for label, text in zip(option_labels, option_texts):
-    output += f"{label}: {text}\n"
+    output += f"({label}): {text}\n"
   return output
