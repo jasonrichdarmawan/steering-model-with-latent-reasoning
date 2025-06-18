@@ -10,13 +10,13 @@ class Args(TypedDict):
   device: str
 
   huginn_model_criterion: str | None
+  huginn_num_steps: int | None
 
   tasks: str
   num_fewshot: int
   batch_size: int | str # 'auto' or int
   limit: int
-  huginn_num_steps: int | None
-  output_path: str | None
+  output_file_path: str | None
 
 def parse_args() -> Args:
   parser = argparse.ArgumentParser(
@@ -53,11 +53,18 @@ def parse_args() -> Args:
     help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
     default="auto",
   )
+
   parser.add_argument(
     '--huginn_model_criterion',
     type=str,
     help="Criterion for the model evaluation",
     default="entropy-diff",
+  )
+  parser.add_argument(
+    '--huginn_num_steps',
+    type=int,
+    help="Number of steps for Huginn model evaluation. If None, will use the default behavior of the model.",
+    default=32,
   )
 
   parser.add_argument(
@@ -85,13 +92,7 @@ def parse_args() -> Args:
     default=50,
   )
   parser.add_argument(
-    '--huginn_num_steps',
-    type=int,
-    help="Number of recurrence steps for the recurrent model (e.g., huginn-0125). Each core block will be iterated this many times; 32 means 32 iterations per block.",
-    default=None
-  )
-  parser.add_argument(
-    '--output_path',
+    '--output_file_path',
     type=str,
     help="Path to save the evaluation results",
     default=None,

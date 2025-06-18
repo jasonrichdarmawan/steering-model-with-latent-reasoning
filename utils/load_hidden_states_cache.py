@@ -13,7 +13,7 @@ def load_hidden_states_cache(file_path: str) -> dict[str, Any]:
     dict: The loaded hidden states cache.
   """
   try:
-    hidden_states_cache = torch.load(file_path, map_location='cpu')
+    hidden_states_cache = torch.load(file_path)
     return hidden_states_cache
   except FileNotFoundError:
     print(f"Error: The file {file_path} does not exist.")

@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if True:
+if False:
   import sys
   from importlib import reload
 
@@ -29,7 +29,7 @@ if True:
   reload(sys.modules.get('utils.prepare_queries', sys))
   reload(sys.modules.get('utils.set_activations_hooks', sys))
   reload(sys.modules.get('utils.remove_hooks', sys))
-  reload(sys.modules.get('utils.generate_sentences', sys))
+  reload(sys.modules.get('utils.generate_sentences_huginn', sys))
   reload(sys.modules.get('utils', sys))
 
 from earm_utils import parse_args
@@ -41,7 +41,7 @@ from utils import load_json_dataset
 from utils import compute_candidate_directions
 from utils import prepare_fewshot_prompts
 from utils import prepare_queries
-from utils import generate_sentences
+from utils import generate_sentences_huginn
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks, remove_hooks
 from utils import set_model_predict_correctness
@@ -63,10 +63,12 @@ if False:
     '--model_name', 'huginn-0125',
     '--device', 'auto',
 
-    '--hidden_states_cache_path', f'{root_path}/experiments/hidden_states_cache',
-    '--mmlu_pro_3000samples_data_file_path', f'{root_path}/datasets/mmlu-pro-3000samples.json',
+    '--huginn_num_steps', '32',
 
-    '--test_data_path', f'{root_path}/datasets',
+    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
+    '--mmlu_pro_3000samples_data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
+
+    '--test_data_path', f'{root_path}/datasets/lirefs',
     '--test_data_name', 'mmlu-pro-3000samples',
     '--with_fewshot_prompts',
     # '--with_cot',
@@ -76,10 +78,14 @@ if False:
     '--layer_indices', '66',
     # '--with_pre_hook',
     '--with_post_hook',
-    '--scale', '0.1'
+    '--scale', '0.1',
+
+    '--output_file_path', f'{root_path}/experiments/reasoning_memorizing_accuracy/huginn-0125.json'
   ]
 
 args = parse_args()
+
+print(args)
 
 # %%
 
@@ -114,14 +120,11 @@ memorizing_indices = [
 if args['with_intervention']:
   print("Loading hidden states cache for intervention.")
   hidden_states_cache = load_hidden_states_cache(
-    file_path=os.path.join(
-      args['hidden_states_cache_path'],
-      f"{args['model_name']}_hidden_states_cache.pt"
-    )
+    file_path=args['hidden_states_cache_file_path'],
   )
 
   candidate_directions = compute_candidate_directions(
-    hidden_states_cache=hidden_states_cache["mmlu-pro-3000samples"],
+    hidden_states_cache=hidden_states_cache,
     reasoning_indices=reasoning_indices,
     memorizing_indices=memorizing_indices,
     dtype=model.dtype
@@ -133,6 +136,8 @@ else:
 # %%
 
 # Load the test dataset based on the specified test data name.
+# TODO: Isn't this data leakage?
+# The mmlu-pro-3000samples dataset is used for both extracting candidate directions and testing the model.
 # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
 match args['test_data_name']:
   case 'mmlu-pro-3000samples':
@@ -196,7 +201,8 @@ def _compute_accuracy(
 ):
   total = len(entries)
   if total == 0:
-    return None
+    print(f"No entries found for {label}. Cannot compute accuracy.")
+    raise None
   correct = sum(entry.get("model_predict_correctness", False) for entry in entries)
   accuracy = correct / total
   print(f"{label} Accuracy: {accuracy:.4f} ({correct}/{total})")
@@ -224,11 +230,16 @@ for queries_batch, entries_batch in tqdm(
   zip(queries_batched, entries_batched),
   total=len(queries_batched)
 ):
-  responses = generate_sentences(
-    model=model,
-    tokenizer=tokenizer,
-    text=queries_batch,
-  )
+  match model.config.model_type:
+    case name if "huginn_" in name:
+      responses = generate_sentences_huginn(
+        model=model,
+        tokenizer=tokenizer,
+        text=queries_batch,
+        num_steps=args["huginn_num_steps"],
+      )
+    case _:
+      raise ValueError(f"Unsupported model type: {model.config.model_type}")
 
   set_model_predict_correctness(
     entries=entries_batch,
@@ -257,15 +268,61 @@ match args['test_data_name']:
       if entry['memory_reason_score'] <= 0.5
     ]
 
-    _compute_accuracy(
+    reasoning_accuracy = _compute_accuracy(
       entries=reasoning_entries,
       label=f"Layer {args['layer_indices']} - Reasoning Subset"
     )
-    _compute_accuracy(
+    memorizing_accuracy = _compute_accuracy(
       entries=memorizing_entries,
       label=f"Layer {args['layer_indices']} - Memorizing Subset"
     )
   case _:
     raise ValueError(f"Unsupported test data name: {args['test_data_name']}")
+
+# %%
+
+if args['output_file_path'] is None:
+  print("No output file path specified, skipping saving results.")
+  sys.exit(0)
+
+# %%
+
+output = torch.load(
+  args['hidden_states_cache_file_path'],
+  map_location='cpu',
+  weights_only=True
+)
+
+# %%
+
+output_key = ' '.join(
+  [
+    f"{key}={value}"
+    for key, value in args.items()
+    if key in [
+      'huginn_num_steps', 
+      'test_data_name', 
+      'with_fewshot_prompts',
+      'with_intervention',
+      'layer_indices',
+      'with_pre_hook',
+      'with_post_hook',
+      'scale'
+    ]
+  ]
+)
+print(f"Using output key: {output_key}")
+
+# %%
+
+output[output_key] = {
+  'reasoning_accuracy': reasoning_accuracy,
+  'memorizing_accuracy': memorizing_accuracy,
+}
+
+output_path = os.path.dirname(args['output_file_path'])
+os.makedirs(output_path, exist_ok=True)
+print(f"Saving results to {args['output_file_path']}")
+torch.save(output)
 
 # %%

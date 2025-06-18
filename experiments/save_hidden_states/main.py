@@ -41,7 +41,6 @@ from utils import prepare_queries
 from utils import get_n_layers
 from utils import get_n_embd
 from utils import cache_hidden_states
-from utils import load_hidden_states_cache
 
 import torch
 from torch import Tensor
@@ -58,14 +57,14 @@ if False:
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
 
-    '--data_file_path', f'{root_path}/datasets/mmlu-pro-3000samples.json',
-    # '--data_path', f'{root_path}/datasets',
+    '--data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
+    # '--data_path', f'{root_path}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples',
 
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
 
-    '--output_path', f'{root_path}/experiments/hidden_states_cache',
+    '--output_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
   ]
 
 args = parse_args()
@@ -145,24 +144,11 @@ for queries_batch in tqdm(queries_batched):
 
 # %%
 
-output_file_path = os.path.join(
-  args['output_path'],
-  f"{args['model_name']}_hidden_states_cache.pt"
-)
+output_path = os.path.dirname(args['output_file_path'])
+os.makedirs(output_path, exist_ok=True)
 
-output = load_hidden_states_cache(
-  file_path=output_file_path,
-)
-
-# %%
-
-output[args['data_name']] = hidden_states_cache
-
-# %%
-
-os.makedirs(args['output_path'], exist_ok=True)
-
+output_file_path = args['output_file_path']
 print(f"Saving hidden states cache to {output_file_path}")
-torch.save(output, output_file_path)
+torch.save(hidden_states_cache, output_file_path)
 
 # %%

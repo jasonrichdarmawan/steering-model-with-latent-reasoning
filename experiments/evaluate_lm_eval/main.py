@@ -49,14 +49,15 @@ if False:
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
     '--device', 'cuda',
+
     '--huginn_model_criterion', 'entropy-diff',
+    '--huginn_num_steps', '32',
 
     '--tasks', 'mmlu',
     '--num_fewshot', '5',
     '--batch_size', '4',
     '--limit', '50',
-    '--huginn_num_steps', '32',
-    '--output_path', f'{root_path}/experiments/lm_eval_results',
+    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.json',
   ]
 
 args = parse_args()
@@ -104,7 +105,7 @@ if args["use_local_datasets"]:
       args["data_path"], 
       self.DATASET_PATH,
     )
-    print(f"Loading dataset {self.DATASET_NAME} from local path: {path}")
+    print(f"Loading dataset {self.DATASET_NAME}/{self.DATASET_NAME} from local path: {path}")
     self.dataset = datasets.load_dataset(
       path=path,
       name=self.DATASET_NAME,
@@ -135,21 +136,18 @@ match args["model_name"]:
 
 # %%
 
-if args['output_path'] is None:
+if args['output_file_path'] is None:
   print("No output path specified. Results will not be saved.")
   sys.exit(0)
-  
-output_file_path = join(
-  args['output_path'], 
-  f"{args['model_name']}_lm_eval_results.json"
-)
+
 try:
   output = torch.load(
-    output_file_path, 
+    args["output_file_path"],
     map_location='cpu',
+    weights_only=False
   )
 except FileNotFoundError:
-  print(f"File not found: {output_file_path}. Creating a new results dictionary.")
+  print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
   output = {}
   
 # %%
@@ -159,7 +157,6 @@ output_key = ' '.join(
     f"{key}={value}"
     for key, value in args.items()
     if key in [
-      'model_name', 
       'huginn_model_criterion', 
       'tasks', 
       'num_fewshot', 
@@ -168,13 +165,17 @@ output_key = ' '.join(
   ]
 )
 print(f"Using output key: {output_key}")
+
+# %%
+
 output[output_key] = results
 
 # %%
 
-os.makedirs(args['output_path'], exist_ok=True)
+output_path = os.path.dirname(args['output_file_path'])
+os.makedirs(output_path, exist_ok=True)
 
-print(f"Saving evaluation results to: {output_file_path}")
-torch.save(output, output_file_path)
+print(f"Saving evaluation results to: {args['output_file_path']}")
+torch.save(output, args['output_file_path'])
 
 # %%
