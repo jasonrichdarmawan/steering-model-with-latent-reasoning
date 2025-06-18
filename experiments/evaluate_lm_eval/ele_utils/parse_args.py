@@ -2,7 +2,8 @@ from typing import TypedDict
 import argparse
 
 class Args(TypedDict):
-  use_hf_mirror: bool
+  use_local_datasets: bool
+  data_path: str | None
 
   models_path: str
   model_name: str
@@ -22,9 +23,15 @@ def parse_args() -> Args:
   )
 
   parser.add_argument(
-    '--use_hf_mirror',
+    '--use_local_datasets',
     action='store_true',
-    help="Use Hugging Face mirror for downloading models and datasets",
+    help="Use local datasets instead of downloading from Hugging Face.",
+  )
+  parser.add_argument(
+    '--data_path',
+    type=str,
+    help="Path to the local datasets directory. If specified, will use local datasets instead of downloading.",
+    default=None,
   )
 
   parser.add_argument(

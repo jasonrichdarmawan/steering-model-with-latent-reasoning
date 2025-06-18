@@ -8,7 +8,7 @@ from transformers import (
 )
 
 # Use custom code for Huginn models
-from models import recpre # type: ignore
+from models import recpre
 
 def load_model_and_tokenizer(
   models_path: str, 
@@ -48,7 +48,7 @@ def load_model(models_path: str, model_name: str):
     join(models_path, model_name),
     torch_dtype=torch_dtype,
     trust_remote_code=trust_remote_code,
-    device_map="auto"
+    device_map="cuda"
   )
 
   return model

@@ -7,6 +7,7 @@ def prepare_queries(
   data,
   data_name: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: dict[str, list[str]] | None = None,
   with_cot: bool = True,
@@ -34,6 +35,7 @@ def prepare_queries(
           model_name=model_name,
           question_content=question_content,
           tokenizer=tokenizer,
+          apply_chat_template=apply_chat_template,
           system_prompt=system_prompt,
           fewshot_prompts=selected_fewshot_prompts,
           with_cot=with_cot
@@ -49,6 +51,7 @@ def prepare_query(
   model_name: str,
   question_content: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: list[str] | None = None,
   with_cot: bool = True
@@ -58,69 +61,80 @@ def prepare_query(
 
   Args:
     model_name: The identifier for the model architecture, typically obtained from PreTrainedModel.config.model_type. 
-      This determines how the query is formatted and which prompt templates or special handling are applied 
-      (e.g., chat-style formatting for models starting with "huginn-").
     question_content: The main content of the question to be asked (do NOT add "Q: " prefix; formatting is handled here).
     tokenizer: Optional tokenizer for formatting chat templates.
+    apply_chat_template: If True, applies a chat template to the query, which is useful for models that expect chat-style input.
     system_prompt: Optional system prompt to guide the model's behavior.
     fewshot_prompts: Optional list of few-shot example prompts to include before the main question.
     with_cot: If True, encourages chain-of-thought reasoning by appending "Let's think step by step." to the prompt.
 
   Returns:
     The fully formatted query string ready for model inference.
-
-  Notes:
-    - For models starting with "huginn_", the function constructs a chat-style prompt using a system message and a user message.
-    - If few-shot prompts are provided, they are prepended to the user message.
-    - If chain-of-thought reasoning is enabled, the question is followed by "A: Let's think step by step." to encourage detailed reasoning.
-    - Otherwise, the question is followed by "A: " for a direct answer.
-    - The tokenizer's chat template is used to format the final query string.
   """
-  query: str = ""
-
   match model_name:
     case name if name.startswith("huginn_"):
-      """
-      Reference: 
-      [1] https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/examples/inference_demo.ipynb
-      [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/f23f2547862a2c1b57f1cfa3c547776cb38f762a/reasoning_representation/Intervention/utils.py
-      """
-      messages: list[str] = []
-      
-      if system_prompt == None:
-        system_prompt = "You are a helpful assistant."
-      
-      messages.append({
-        "role": "system",
-        "content": system_prompt
-      })
-
-      user_content = ""
-
-      if fewshot_prompts:
-        for fewshot_prompt in fewshot_prompts:
-          # Each few-shot prompt should already end with "\n\n"
-          user_content += fewshot_prompt
-      
-      # If few-shot prompts are provided and chain-of-thought (CoT) reasoning is enabled (with_cot=True),
-      # append the question followed by "A: Let's think step by step." to encourage step-by-step reasoning.
-      # Otherwise, append the question followed by "A: " for a direct answer.
-      if fewshot_prompts and with_cot:
-        user_content += f"Q: {question_content}\nA: Let's think step by step. "
-      else:
-        user_content += f"Q: {question_content}\nA: "
-
-      messages.append({
-        "role": "user",
-        "content": user_content
-      })
-
-      query: str = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
+      query = _prepare_query_huginn(
+        question_content=question_content,
+        tokenizer=tokenizer,
+        apply_chat_template=apply_chat_template,
+        system_prompt=system_prompt,
+        fewshot_prompts=fewshot_prompts,
+        with_cot=with_cot
       )
+      
+      return query
     case _:
       raise ValueError(f"Unsupported model name: {model_name}")
-    
+
+def _prepare_query_huginn(
+  question_content: str,
+  tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_chat_template: bool = False,
+  system_prompt: str | None = None,
+  fewshot_prompts: list[str] | None = None,
+  with_cot: bool = True
+):
+  """
+  Reference: 
+  [1] https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/examples/inference_demo.ipynb
+  [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/f23f2547862a2c1b57f1cfa3c547776cb38f762a/reasoning_representation/Intervention/utils.py
+  """
+  user_content = ""
+
+  if fewshot_prompts:
+    for fewshot_prompt in fewshot_prompts:
+      # Each few-shot prompt should already end with "\n\n"
+      user_content += fewshot_prompt
+  
+  # If few-shot prompts are provided and chain-of-thought (CoT) reasoning is enabled (with_cot=True),
+  # append the question followed by "A: Let's think step by step." to encourage step-by-step reasoning.
+  # Otherwise, append the question followed by "A: " for a direct answer.
+  if fewshot_prompts and with_cot:
+    user_content += f"Q: {question_content}\nA: Let's think step by step. "
+  else:
+    user_content += f"Q: {question_content}\nA: "
+
+  if apply_chat_template is False:
+    query = user_content
+    return query
+
+  messages: list[str] = []
+  
+  if system_prompt:
+    messages.append({
+      "role": "system",
+      "content": system_prompt
+    })
+
+  messages.append({
+    "role": "user",
+    "content": user_content
+  })
+
+  query: str = tokenizer.apply_chat_template(
+    messages,
+    tokenize=False,
+    add_generation_prompt=True
+  )
+
   return query

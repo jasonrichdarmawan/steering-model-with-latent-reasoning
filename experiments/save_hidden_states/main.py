@@ -107,7 +107,8 @@ queries = prepare_queries(
   data=sampled_data,
   data_name=args['data_name'],
   tokenizer=tokenizer,
-  system_prompt="You are a helpful assistant.",
+  apply_chat_template=False,
+  system_prompt=None,
   fewshot_prompts=None,
   with_cot=False,
 )

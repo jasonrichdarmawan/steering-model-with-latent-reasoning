@@ -32,19 +32,19 @@ from utils import HuginnWrapper
 
 from os.path import join
 import torch
-from lm_eval.tasks import TaskManager
 from lm_eval import simple_evaluate
 
 # %%
 
-if True:
+if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
   root_path = "/home/npu-tao/jason"
   sys.argv = [
     'main.py',
-    '--use_hf_mirror',
+    '--use_local_datasets',
+    '--data_path', f'{root_path}/datasets',
 
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
@@ -77,7 +77,7 @@ match args["model_name"]:
         args["models_path"], 
         args["model_name"]
       ),
-      device="cuda",
+      device="cuda:1",
       batch_size=args["batch_size"],
       trust_remote_code=False,
       dtype=torch.bfloat16,
@@ -92,14 +92,29 @@ match args["model_name"]:
 
 # %%
 
-if args['use_hf_mirror']:
-  print("Initializing TaskManager: loading tasks from local datasets directory under the project root.")
-  task_manager = TaskManager(
-    include_path=f"{project_root}/tasks",
-    include_defaults=False,
+if args["use_local_datasets"]:
+  from typing import Optional, Any
+  import datasets
+  from lm_eval.api.task import ConfigurableTask
+
+  def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
+    path = os.path.join(
+      args["data_path"], 
+      self.DATASET_PATH,
+    )
+    print(f"Loading dataset {self.DATASET_NAME} from local path: {path}")
+    self.dataset = datasets.load_dataset(
+      path=path,
+      name=self.DATASET_NAME,
+      **dataset_kwargs if dataset_kwargs is not None else {},
+    )
+
+  print(
+    "Overriding ConfigurableTask.download to load datasets from local path. "
+    "Ensure dataset files (including Python scripts) exist at the specified location. "
+    "If using a mirror, update dataset scripts to use hf-mirror.com if huggingface.co is inaccessible."
   )
-else:
-  task_manager = None
+  ConfigurableTask.download = download
 
 # %%
 
@@ -111,7 +126,6 @@ match args["model_name"]:
       num_fewshot=args["num_fewshot"],
       limit=args["limit"],
       gen_kwargs=f"num_steps={args['huginn_num_steps']}",
-      task_manager=task_manager,
     )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
