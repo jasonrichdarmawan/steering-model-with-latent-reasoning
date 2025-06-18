@@ -144,9 +144,13 @@ for queries_batch in tqdm(queries_batched):
 
 # %%
 
+output_file_path = os.path.join(
+  args['output_path'],
+  f"{args['model_name']}_hidden_states_cache.pt"
+)
+
 output = load_hidden_states_cache(
-  hidden_states_cache_path=args['output_path'],
-  model_name=args['model_name']
+  file_path=output_file_path,
 )
 
 # %%
@@ -156,7 +160,6 @@ output[args['data_name']] = hidden_states_cache
 # %%
 
 os.makedirs(args['output_path'], exist_ok=True)
-output_file_path = os.path.join(args['output_path'], f"{args['model_name']}_hidden_states_cache.pt")
 
 print(f"Saving hidden states cache to {output_file_path}")
 torch.save(output, output_file_path)

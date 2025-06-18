@@ -114,8 +114,10 @@ memorizing_indices = [
 if args['with_intervention']:
   print("Loading hidden states cache for intervention.")
   hidden_states_cache = load_hidden_states_cache(
-    hidden_states_cache_path=args['hidden_states_cache_path'],
-    model_name=args['model_name']
+    file_path=os.path.join(
+      args['hidden_states_cache_path'],
+      f"{args['model_name']}_hidden_states_cache.pt"
+    )
   )
 
   candidate_directions = compute_candidate_directions(

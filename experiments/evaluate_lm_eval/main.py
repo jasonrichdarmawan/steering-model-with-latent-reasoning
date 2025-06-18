@@ -37,7 +37,7 @@ from lm_eval import simple_evaluate
 
 # %%
 
-if False:
+if True:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
@@ -156,7 +156,6 @@ output[output_key] = results
 # %%
 
 os.makedirs(args['output_path'], exist_ok=True)
-output_file_path = join(args['output_path'], f"{args['model_name']}_lm_eval_results.pt")
 
 print(f"Saving evaluation results to: {output_file_path}")
 torch.save(output, output_file_path)
