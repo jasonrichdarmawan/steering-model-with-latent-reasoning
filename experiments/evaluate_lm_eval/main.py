@@ -110,9 +110,10 @@ if args["use_local_datasets"]:
     )
 
   print(
-    "Overriding ConfigurableTask.download to load datasets from local path. "
-    "Ensure dataset files (including Python scripts) exist at the specified location. "
-    "If using a mirror, update dataset scripts to use hf-mirror.com if huggingface.co is inaccessible."
+    "Overriding ConfigurableTask.download to load datasets from local path.\n"
+    f"Specified location: {args['data_path']}/<dataset-name>\n"
+    "Ensure dataset files (including Python scripts) exist at the specified location.\n"
+    "If using a mirror, update dataset scripts to use hf-mirror.com if huggingface.co is inaccessible.\n"
   )
   ConfigurableTask.download = download
 
