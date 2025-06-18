@@ -12,11 +12,13 @@ from models import recpre
 
 def load_model_and_tokenizer(
   models_path: str, 
-  model_name: str
+  model_name: str,
+  device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
   model = load_model(
     models_path=models_path, 
     model_name=model_name,
+    device=device,
   )
 
   tokenizer: PreTrainedTokenizerFast = load_tokenizer(
@@ -26,11 +28,11 @@ def load_model_and_tokenizer(
 
   return model, tokenizer
 
-def load_model(models_path: str, model_name: str):
-  """
-  TODO: verify multi-GPU support
-  """
-
+def load_model(
+  models_path: str, 
+  model_name: str, 
+  device: str
+):
   torch_dtype = torch.float32
   trust_remote_code = True
   
@@ -48,7 +50,7 @@ def load_model(models_path: str, model_name: str):
     join(models_path, model_name),
     torch_dtype=torch_dtype,
     trust_remote_code=trust_remote_code,
-    device_map="cuda"
+    device_map=device,
   )
 
   return model

@@ -2,7 +2,7 @@
 Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
 """
 
-from models.recpre import RavenForCausalLM
+from models import recpre
 
 from lm_eval.models.huggingface import HFLM
 from typing import Union, Literal, Optional
@@ -116,5 +116,5 @@ class HuginnWrapper(HFLM):
     
 def update_huggingface_implementation(model):
     """This function selectively updates function implementations in the huggingface model."""
-    model.generate = types.MethodType(RavenForCausalLM.generate, model)
-    model.generate_with_adaptive_compute = types.MethodType(RavenForCausalLM.generate_with_adaptive_compute, model)
+    model.generate = types.MethodType(recpre.RavenForCausalLM.generate, model)
+    model.generate_with_adaptive_compute = types.MethodType(recpre.RavenForCausalLM.generate_with_adaptive_compute, model)

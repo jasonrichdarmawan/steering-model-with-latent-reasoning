@@ -597,7 +597,7 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
             freqs_cis = self.freqs_cis.index_select(1, position_ids.squeeze())
         elif cache_position is not None:
             freqs_cis = self.freqs_cis[:, cache_position]
-        x, block_idx, attn_maps = self.core_block_forward(
+        x, block_idx, attn_maps, _ = self.core_block_forward(
             input_states, input_embeds, freqs_cis, attention_mask, past_key_values, block_idx, attn_maps
         )
         return x, block_idx, attn_maps

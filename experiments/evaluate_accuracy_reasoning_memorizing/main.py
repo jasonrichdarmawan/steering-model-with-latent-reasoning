@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if False:
+if True:
   import sys
   from importlib import reload
 
@@ -46,7 +46,6 @@ from utils import ProjectionHookConfig
 from utils import set_activations_hooks, remove_hooks
 from utils import set_model_predict_correctness
 
-from transformers import GenerationConfig
 from tqdm import tqdm
 import random
 import torch
@@ -62,6 +61,7 @@ if False:
     'main.py',
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
+    '--device', 'auto',
 
     '--hidden_states_cache_path', f'{root_path}/experiments/hidden_states_cache',
     '--mmlu_pro_3000samples_data_file_path', f'{root_path}/datasets/mmlu-pro-3000samples.json',
@@ -71,7 +71,6 @@ if False:
     '--with_fewshot_prompts',
     # '--with_cot',
     '--batch_size', '1',
-    '--max_new_tokens', '200',
 
     '--with_intervention',
     '--layer_indices', '66',
@@ -91,7 +90,8 @@ use_deterministic_algorithms()
 
 model, tokenizer = load_model_and_tokenizer(
   models_path=args['models_path'],
-  model_name=args['model_name']
+  model_name=args['model_name'],
+  device=args["device"],
 )
 
 # %%
@@ -165,7 +165,7 @@ queries = prepare_queries(
   data=test_dataset,
   data_name=args['test_data_name'],
   tokenizer=tokenizer,
-  system_prompt="You are a helpful assistant.",
+  apply_chat_template=False,
   fewshot_prompts=fewshot_prompts,
   with_cot=args['with_cot'],
 )
@@ -220,47 +220,24 @@ if args['with_intervention']:
 else:
   print("No intervention hooks set up, proceeding without them.")
 
-match model.config.model_type:
-  case name if name.startswith("huginn_"):
-    """
-    Reference:
-    [1] https://github.com/seal-rg/recurrent-pretraining/blob/9f84159bc548f4fe75a577d71575c35ef80e1977/examples/inference_demo.ipynb
-    [2] https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
-    """
-    generation_config = GenerationConfig(
-      max_new_tokens=args['max_new_tokens'],
-      stop_strings=["<|end_text|>", "<|end_turn|>"],
-      do_sample=False,
-      temperature=None,
-      top_p=None,
-      min_p=None,
-      return_dict_in_generate=True,
-      eos_token_id=65505,
-      bos_token_id=65504,
-      pad_token_id=65509
-    )
+for queries_batch, entries_batch in tqdm(
+  zip(queries_batched, entries_batched),
+  total=len(queries_batched)
+):
+  responses = generate_sentences(
+    model=model,
+    tokenizer=tokenizer,
+    text=queries_batch,
+  )
 
-    for queries_batch, entries_batch in tqdm(
-      zip(queries_batched, entries_batched),
-      total=len(queries_batched)
-    ):
-      responses = generate_sentences(
-        model=model,
-        tokenizer=tokenizer,
-        text=queries_batch,
-        config=generation_config,
-      )
+  set_model_predict_correctness(
+    entries=entries_batch,
+    queries=queries_batch,
+    responses=responses,
+    test_dataset_name=args['test_data_name']
+  )
 
-      set_model_predict_correctness(
-        entries=entries_batch,
-        queries=queries_batch,
-        responses=responses,
-        test_dataset_name=args['test_data_name']
-      )
-
-      torch.cuda.empty_cache()
-  case _:
-    raise ValueError(f"Unsupported model type: {model.config.model_type}")
+  torch.cuda.empty_cache()
     
 if args['with_intervention']:
   remove_hooks(hooks)

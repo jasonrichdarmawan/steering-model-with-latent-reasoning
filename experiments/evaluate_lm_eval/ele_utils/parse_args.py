@@ -7,6 +7,7 @@ class Args(TypedDict):
 
   models_path: str
   model_name: str
+  device: str
 
   huginn_model_criterion: str | None
 
@@ -45,6 +46,12 @@ def parse_args() -> Args:
     type=str,
     help="Folder name of the specific model to load from the root directory",
     default="huginn-0125",
+  )
+  parser.add_argument(
+    '--device',
+    type=str,
+    help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
+    default="auto",
   )
   parser.add_argument(
     '--huginn_model_criterion',

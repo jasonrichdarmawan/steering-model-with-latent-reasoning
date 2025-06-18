@@ -4,6 +4,7 @@ import argparse
 class Args(TypedDict):
   models_path: str
   model_name: str
+  device: str
   
   hidden_states_cache_path: str
   mmlu_pro_3000samples_data_file_path: str
@@ -13,7 +14,6 @@ class Args(TypedDict):
   with_fewshot_prompts: bool
   with_cot: bool
   batch_size: int
-  max_new_tokens: int
 
   with_intervention: bool
   layer_indices: list[int]
@@ -30,6 +30,8 @@ def parse_args() -> Args:
   parser.add_argument('--model_name', type=str,
                       help="Folder name of the specific model to load from the root directory",
                       default="huginn-0125")
+  parser.add_argument('--device', type=str, default="auto",
+                      help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection")
   
   parser.add_argument('--hidden_states_cache_path', type=str,
                       help="Path to the cached hidden states",
@@ -50,8 +52,6 @@ def parse_args() -> Args:
                       help="Whether to use chain-of-thought (CoT) reasoning in the prompts")
   parser.add_argument('--batch_size', type=int, default=1,
                       help="Batch size for processing the test dataset")
-  parser.add_argument('--max_new_tokens', type=int, default=200,
-                      help="Maximum number of new tokens to generate in the response")
 
   parser.add_argument('--with_intervention', action="store_true",
                       help="Whether to apply the intervention for reasoning and memorization accuracy evaluation")

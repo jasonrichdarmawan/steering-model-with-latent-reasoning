@@ -48,6 +48,7 @@ if False:
 
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
+    '--device', 'cuda',
     '--huginn_model_criterion', 'entropy-diff',
 
     '--tasks', 'mmlu',
@@ -72,12 +73,13 @@ match args["model_name"]:
     """
     # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
+    print("wow")
     model = HuginnWrapper(
       pretrained=join(
         args["models_path"], 
         args["model_name"]
       ),
-      device="cuda:1",
+      device=args["device"],
       batch_size=args["batch_size"],
       trust_remote_code=False,
       dtype=torch.bfloat16,

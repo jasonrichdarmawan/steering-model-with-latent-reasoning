@@ -19,12 +19,13 @@ WORKSPACE_PATH="/home/npu-tao/jason"
 python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
 --models_path "$WORKSPACE_PATH/transformers" \
 --model_name huginn-0125 \
+--device cuda \
 --hidden_states_cache_path "$WORKSPACE_PATH/experiments/hidden_states_cache" \
 --mmlu_pro_3000samples_data_file_path "$WORKSPACE_PATH/datasets/mmlu-pro-3000samples.json" \
 --test_data_path "$WORKSPACE_PATH/datasets" \
 --test_data_name mmlu-pro-3000samples \
 --with_fewshot_prompts \
---batch_size 4 \
+--batch_size 1 \
 --with_intervention \
 --layer_indices 66 \
 --with_post_hook
@@ -36,7 +37,8 @@ python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
 WORKSPACE_PATH="/home/npu-tao/jason"
 
 python experiments/evaluate_lm_eval/main.py \
---use_hf_mirror \
+--use_local_datasets \
+--data_path "$WORKSPACE_PATH/datasets" \
 --models_path "$WORKSPACE_PATH/transformers" \
 --model_name huginn-0125 \
 --tasks mmlu \
