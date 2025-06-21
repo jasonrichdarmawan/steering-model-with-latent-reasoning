@@ -1,7 +1,7 @@
 # %%
 
 from runner_utils import parse_args
-from runner_utils import EXPERIMENT_JOBS
+from runner_utils import set_up_experiment_jobs
 
 from typing import TypedDict
 from datetime import datetime
@@ -21,6 +21,7 @@ if False:
   root_path = "/home/npu-tao/jason"
   sys.argv = [
     'main.py',
+    '--workspace_path', root_path,
     '--output_path', f'{root_path}/experiments/runner',
   ]
 
@@ -30,6 +31,8 @@ print('#' * 60)
 print(args)
 
 # %%
+
+EXPERIMENT_JOBS = set_up_experiment_jobs(args['workspace_path'])
 
 if False:
   print("Only running some experiments for testing purposes.")

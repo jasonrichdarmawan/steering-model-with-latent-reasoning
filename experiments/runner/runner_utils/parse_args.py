@@ -2,11 +2,19 @@ from typing import TypedDict
 import argparse
 
 class Args(TypedDict):
+  workspace_path: str
   output_path: str
 
 def parse_args() -> Args:
   parser = argparse.ArgumentParser(
     description="Run multiple experiments in sequence and log the results."
+  )
+
+  parser.add_argument(
+    '--workspace_path',
+    type=str,
+    help="Path to the workspace directory where experiments will be run.",
+    default="/home/npu-tao/jason/experiments/runner",
   )
   
   parser.add_argument(
