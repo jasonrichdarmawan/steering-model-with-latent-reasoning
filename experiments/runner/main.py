@@ -6,6 +6,7 @@ from runner_utils import set_up_experiment_jobs
 from typing import TypedDict
 from datetime import datetime
 from typing import Optional
+import os
 import subprocess
 
 if True:
@@ -69,6 +70,8 @@ now = datetime.now()
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 file_path = f"{args['output_path']}/{timestamp}.txt"
 
+os.makedirs(args['output_path'], exist_ok=True)  # Ensure the output directory exists
+
 with open(file_path, 'w', encoding='utf-8') as f:
   original_stdout = sys.stdout
   original_stderr = sys.stderr
@@ -130,7 +133,7 @@ with open(file_path, 'w', encoding='utf-8') as f:
     else:
       print(f"Experiment {result['experiment_number']}: Failed at command {result['failed_at']}")
 
-sys.stdout = original_stdout
-sys.stderr = original_stderr
+  sys.stdout = original_stdout
+  sys.stderr = original_stderr
 
 # %%
