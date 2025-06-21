@@ -107,4 +107,7 @@ def parse_args() -> Args:
 
   args, _ = parser.parse_known_args()
 
+  if not args["output_file_path"].endswith(".pt"):
+    raise ValueError("Output file path must end with .pt")
+
   return args.__dict__

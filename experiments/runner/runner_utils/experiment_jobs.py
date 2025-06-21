@@ -50,7 +50,7 @@ python experiments/evaluate_lm_eval/main.py \
 --batch_size 1 \
 --limit 14 \
 \
---output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.json"
+--output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.pt"
 """
 
 EVALUATE_REASONING_MEMORIZING_WITH_INTERVENTION_CMD = f"""\
@@ -63,11 +63,10 @@ python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
 \
 --huginn_num_steps 32 \
 \
---hidden_states_cache_file_path "$WORKSPACE_PATH/experiments/hidden_states_cache" \
---mmlu_pro_3000samples_data_file_path "$WORKSPACE_PATH/datasets/lirefs/mmlu-pro-3000samples.json" \
+--hidden_states_cache_file_path "$WORKSPACE_PATH/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt" \
 \
 --test_data_path "$WORKSPACE_PATH/datasets/lirefs" \
---test_data_name mmlu-pro-3000samples \
+--test_data_name mmlu-pro-3000samples.json \
 --with_fewshot_prompts \
 --batch_size 1 \
 \

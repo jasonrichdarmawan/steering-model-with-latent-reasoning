@@ -58,7 +58,7 @@ if False:
     '--num_fewshot', '5',
     '--batch_size', '4',
     '--limit', '50',
-    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.json',
+    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.pt',
   ]
 
 args = parse_args()

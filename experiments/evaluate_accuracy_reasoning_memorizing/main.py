@@ -105,7 +105,7 @@ if args['with_intervention']:
   print("Loading mmlu-pro-3000samples dataset for intervention.")
   file_path = os.path.join(
     args['test_data_path'],
-    args['test_data_name'],
+    "mmlu-pro-3000samples.json"
   )
   mmlu_pro_3000samples_dataset = load_json_dataset(
     file_path=file_path,
@@ -148,7 +148,7 @@ match args['test_data_name']:
   case 'mmlu-pro-3000samples.json':
     file_path = os.path.join(
       args['test_data_path'], 
-      args['test_data_name']
+      "mmlu-pro-3000samples.json"
     )
     print(f"Loading {file_path} dataset with sample_size {args['test_data_sample_size']} for testing.")
     test_dataset = load_json_dataset(
