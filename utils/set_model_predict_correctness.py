@@ -9,7 +9,7 @@ def set_model_predict_correctness(
   test_dataset_name: str
 ):
   match test_dataset_name:
-    case 'mmlu-pro-3000samples':
+    case 'mmlu-pro-3000samples.json':
       for entry, query, response in zip(entries, queries, responses):
         entry['solution'] = response
         
@@ -44,7 +44,7 @@ def get_prediction(
   test_dataset_name: str
 ) -> str | None:
   match test_dataset_name:
-    case 'mmlu-pro-3000samples':
+    case 'mmlu-pro-3000samples.json':
       pattern = r"answer is \(?([ABCDEFGHIJ])\)?"
       match = re.search(pattern, output)
       if match:

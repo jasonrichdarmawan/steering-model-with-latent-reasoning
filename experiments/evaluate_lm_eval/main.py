@@ -49,6 +49,7 @@ if False:
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
     '--device', 'cuda',
+    '--with_parallelize',
 
     '--huginn_model_criterion', 'entropy-diff',
     '--huginn_num_steps', '32',
@@ -61,6 +62,10 @@ if False:
   ]
 
 args = parse_args()
+print(f"Parsed arguments:")
+print('#' * 60)
+for key, value in args.items():
+  print(f"{key}: {value}")
 
 # %%
 
@@ -74,7 +79,6 @@ match args["model_name"]:
     """
     # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
-    print("wow")
     model = HuginnWrapper(
       pretrained=join(
         args["models_path"], 
@@ -89,6 +93,7 @@ match args["model_name"]:
       lookup_strategy="full",
       continuous_compute=False,
       latent_dampening=False,
+      parallelize=args["with_parallelize"]
     )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
@@ -105,7 +110,7 @@ if args["use_local_datasets"]:
       args["data_path"], 
       self.DATASET_PATH,
     )
-    print(f"Loading dataset {self.DATASET_NAME}/{self.DATASET_NAME} from local path: {path}")
+    print(f"Loading dataset from local path: {path}")
     self.dataset = datasets.load_dataset(
       path=path,
       name=self.DATASET_NAME,
@@ -141,6 +146,7 @@ if args['output_file_path'] is None:
   sys.exit(0)
 
 try:
+  print(f"Loading existing results from: {args['output_file_path']}")
   output = torch.load(
     args["output_file_path"],
     map_location='cpu',

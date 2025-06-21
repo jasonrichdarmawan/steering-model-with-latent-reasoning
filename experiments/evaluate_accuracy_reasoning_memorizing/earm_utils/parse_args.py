@@ -7,17 +7,16 @@ class Args(TypedDict):
   device: str
 
   huginn_num_steps: int | None
-  
-  hidden_states_cache_file_path: str
-  mmlu_pro_3000samples_data_file_path: str
 
   test_data_path: str
   test_data_name: str
+  test_data_sample_size: int | None
   with_fewshot_prompts: bool
   with_cot: bool
   batch_size: int
 
   with_intervention: bool
+  hidden_states_cache_file_path: str | None
   layer_indices: list[int]
   with_pre_hook: bool
   with_post_hook: bool
@@ -32,38 +31,27 @@ def parse_args() -> Args:
 
   parser.add_argument(
     '--models_path',
-    type=str,
     help="Path to the root directory containing multiple model folders",
+    type=str,
   )
   parser.add_argument(
     '--model_name', 
-    type=str,
     help="Folder name of the specific model to load from the root directory",
-    default="huginn-0125"
+    type=str,
+    default="huginn-0125",
   )
   parser.add_argument(
     '--device', 
+    help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
     type=str, 
     default="auto",
-    help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection"
   )
   
   parser.add_argument(
     '--huginn_num_steps', 
+    help="Number of steps for Huginn model evaluation. If None, will use the default behavior of the model.",
     type=int, 
     default=None,
-    help="Number of steps for Huginn model evaluation. If None, will use the default behavior of the model."
-  )
-
-  parser.add_argument(
-    '--hidden_states_cache_file_path',
-    type=str,
-    help="Path to the cached hidden states",
-  )
-  parser.add_argument(
-    '--mmlu_pro_3000samples_data_file_path', 
-    type=str,
-    help="Path to the MMLU Pro 3000 samples dataset file",
   )
 
   parser.add_argument(
@@ -72,9 +60,16 @@ def parse_args() -> Args:
     help="Path to the root directory containing multiple data folders",
   )
   parser.add_argument(
-    '--test_data_name', type=str,
+    '--test_data_name',
     help="Folder name of the specific dataset to load from the root directory",
-    default="mmlu-pro-3000samples"
+    type=str,
+    default="mmlu-pro-3000samples.json",
+  )
+  parser.add_argument(
+    '--test_data_sample_size',
+    type=int,
+    help="Number of samples to randomly select from the test dataset",
+    default=200,
   )
   parser.add_argument(
     '--with_fewshot_prompts',
@@ -97,6 +92,12 @@ def parse_args() -> Args:
     '--with_intervention',
     action="store_true",
     help="Whether to apply the intervention for reasoning and memorization accuracy evaluation"
+  )
+  parser.add_argument(
+    '--hidden_states_cache_file_path',
+    type=str,
+    help="Path to the cached hidden states",
+    default=None,
   )
   parser.add_argument(
     '--layer_indices',

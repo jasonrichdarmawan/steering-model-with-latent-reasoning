@@ -20,7 +20,7 @@ def prepare_queries(
   queries: list[str] = []
 
   match data_name:
-    case "mmlu-pro" | "mmlu-pro-3000samples":
+    case "mmlu-pro" | "mmlu-pro-3000samples.json":
       for entry in data:
         selected_fewshot_prompts = fewshot_prompts
         if selected_fewshot_prompts is not None:

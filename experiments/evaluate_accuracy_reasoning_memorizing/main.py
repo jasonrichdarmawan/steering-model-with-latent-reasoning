@@ -47,7 +47,6 @@ from utils import set_activations_hooks, remove_hooks
 from utils import set_model_predict_correctness
 
 from tqdm import tqdm
-import random
 import torch
 
 # %%
@@ -65,16 +64,14 @@ if False:
 
     '--huginn_num_steps', '32',
 
-    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
-    '--mmlu_pro_3000samples_data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
-
     '--test_data_path', f'{root_path}/datasets/lirefs',
-    '--test_data_name', 'mmlu-pro-3000samples',
+    '--test_data_name', 'mmlu-pro-3000samples.json',
     '--with_fewshot_prompts',
     # '--with_cot',
     '--batch_size', '1',
 
     '--with_intervention',
+    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
     '--layer_indices', '66',
     # '--with_pre_hook',
     '--with_post_hook',
@@ -84,8 +81,10 @@ if False:
   ]
 
 args = parse_args()
-
-print(args)
+print(f"Parsed arguments:")
+print('#' * 60)
+for key, value in args.items():
+  print(f"{key}: {value}")
 
 # %%
 
@@ -102,18 +101,24 @@ model, tokenizer = load_model_and_tokenizer(
 
 # %%
 
-mmlu_pro_3000samples_dataset = load_json_dataset(
-  file_path=args['mmlu_pro_3000samples_data_file_path'],
-)
+if args['with_intervention']:
+  print("Loading mmlu-pro-3000samples dataset for intervention.")
+  file_path = os.path.join(
+    args['test_data_path'],
+    args['test_data_name'],
+  )
+  mmlu_pro_3000samples_dataset = load_json_dataset(
+    file_path=file_path,
+  )
 
-reasoning_indices = [
-  index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
-  if sample['memory_reason_score'] > 0.5
-]
-memorizing_indices = [
-  index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
-  if sample['memory_reason_score'] <= 0.5
-]
+  reasoning_indices = [
+    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+    if sample['memory_reason_score'] > 0.5
+  ]
+  memorizing_indices = [
+    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+    if sample['memory_reason_score'] <= 0.5
+  ]
 
 # %%
 
@@ -140,9 +145,16 @@ else:
 # The mmlu-pro-3000samples dataset is used for both extracting candidate directions and testing the model.
 # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
 match args['test_data_name']:
-  case 'mmlu-pro-3000samples':
-    print("Loading MMLU-Pro 3000 samples dataset for testing.")
-    test_dataset = random.sample(mmlu_pro_3000samples_dataset, 200)
+  case 'mmlu-pro-3000samples.json':
+    file_path = os.path.join(
+      args['test_data_path'], 
+      args['test_data_name']
+    )
+    print(f"Loading {file_path} dataset with sample_size {args['test_data_sample_size']} for testing.")
+    test_dataset = load_json_dataset(
+      file_path=file_path,
+      sample_size=args['test_data_sample_size'],
+    )
 
     reasoning_indices = [index for index, sample in enumerate(test_dataset) if sample['memory_reason_score'] > 0.5]
     memorizing_indices = [index for index, sample in enumerate(test_dataset) if sample['memory_reason_score'] <= 0.5]
@@ -253,8 +265,10 @@ for queries_batch, entries_batch in tqdm(
 if args['with_intervention']:
   remove_hooks(hooks)
 
+# %%
+
 match args['test_data_name']:
-  case 'mmlu-pro-3000samples':
+  case 'mmlu-pro-3000samples.json':
     reasoning_entries = [
       entry
       for batch in entries_batched
@@ -287,11 +301,15 @@ if args['output_file_path'] is None:
 
 # %%
 
-output = torch.load(
-  args['hidden_states_cache_file_path'],
-  map_location='cpu',
-  weights_only=True
-)
+try:
+  output = torch.load(
+    args['output_file_path'],
+    map_location='cpu',
+    weights_only=True
+  )
+except FileNotFoundError as e:
+  print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
+  output = {}
 
 # %%
 
@@ -323,6 +341,6 @@ output[output_key] = {
 output_path = os.path.dirname(args['output_file_path'])
 os.makedirs(output_path, exist_ok=True)
 print(f"Saving results to {args['output_file_path']}")
-torch.save(output)
+torch.save(output, args['output_file_path'])
 
 # %%

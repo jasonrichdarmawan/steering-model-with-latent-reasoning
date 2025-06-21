@@ -5,7 +5,6 @@ class Args(TypedDict):
   models_path: str
   model_name: str
 
-  data_file_path: str
   data_path: str
   data_name: str
 
@@ -30,25 +29,21 @@ def parse_args() -> Args:
   )
   
   parser.add_argument(
-    '--data_file_path',
-    type=str,
-    help="(Optional) Path to a JSON file containing the dataset. If this is provided and not empty, it will be used instead of --data_path. When --data_file_path is not empty, --data_name is used as the hidden_states_cache key.",
-  )
-  parser.add_argument(
     '--data_path',
     type=str,
-    help="(Optional) Path to the root directory containing multiple data folders. Ignored if --data_file_path is provided and not empty.",
+    help="Path to the root directory containing multiple data folders.",
   )
   parser.add_argument(
     '--data_name',
     type=str,
-    help="(Optional) Folder name of the specific dataset to load from the root directory, or the key for hidden_states_cache if --data_file_path is provided and not empty.",
+    help="Folder name of the specific dataset to load from the root directory, or the key for hidden_states_cache.",
   )
 
   parser.add_argument(
     '--data_sample_size',
     type=int,
     help="Number of samples to randomly select from the test dataset",
+    default=None,
   )
   parser.add_argument(
     '--data_batch_size',

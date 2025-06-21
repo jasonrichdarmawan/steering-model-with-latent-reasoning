@@ -13,7 +13,7 @@ def prepare_fewshot_prompts(
   """
 
   match data_name:
-    case 'mmlu-pro-3000samples' | 'mmlu-pro':
+    case 'mmlu-pro-3000samples.json' | 'mmlu-pro':
       dataset = load_from_disk(
         os.path.join(data_path, 'mmlu-pro')
       )

@@ -57,9 +57,8 @@ if False:
     '--models_path', f'{root_path}/transformers',
     '--model_name', 'huginn-0125',
 
-    '--data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
-    # '--data_path', f'{root_path}/datasets/lirefs',
-    '--data_name', 'mmlu-pro-3000samples',
+    '--data_path', f'{root_path}/datasets/lirefs',
+    '--data_name', 'mmlu-pro-3000samples.json',
 
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
@@ -68,6 +67,10 @@ if False:
   ]
 
 args = parse_args()
+print(f"Parsed arguments:")
+print('#' * 60)
+for key, value in args.items():
+  print(f"{key}: {value}")
 
 # %%
 
@@ -83,21 +86,19 @@ model, tokenizer = load_model_and_tokenizer(
 
 # %%
 
-if args['data_file_path']:
-  print(f"Loading dataset from file: {args['data_file_path']}")
+if args['data_name'].endswith('.json'):
+  print(f"Loading dataset from JSON file {args['data_path']}/{args['data_name']} and sample size {args['data_sample_size']}")
   sampled_data = load_json_dataset(
-    file_path=args['data_file_path'],
-    sample_size=args.get('data_sample_size', None)
+    file_path=os.path.join(args['data_path'], args['data_name']),
+    sample_size=args['data_sample_size'],
   )
-elif args['data_path'] and args['data_name']:
-  print(f"Loading dataset from path: {args['data_path']}, name: {args['data_name']}")
+else:
+  print(f"Loading dataset {args['data_path']}/{args['data_name']} and sample size {args['data_sample_size']}")
   sampled_data = load_and_sample_test_dataset(
     data_path=args['data_path'],
     data_name=args['data_name'],
-    sample_size=args.get('data_sample_size', None)
+    sample_size=args['data_sample_size'],
   )
-else:
-  raise ValueError("Either data_file_path must be provided or both data_path and data_name must be specified.")
 
 # %%
 

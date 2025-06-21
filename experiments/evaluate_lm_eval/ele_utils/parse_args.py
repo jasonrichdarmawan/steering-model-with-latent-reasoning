@@ -8,6 +8,7 @@ class Args(TypedDict):
   models_path: str
   model_name: str
   device: str
+  with_parallelize: bool
 
   huginn_model_criterion: str | None
   huginn_num_steps: int | None
@@ -52,6 +53,12 @@ def parse_args() -> Args:
     type=str,
     help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
     default="auto",
+  )
+  parser.add_argument(
+    '--with_parallelize',
+    action='store_true',
+    help="Whether to use parallel processing for evaluation. If set, will use lm_eval's parallelize function.",
+    default=False,
   )
 
   parser.add_argument(
