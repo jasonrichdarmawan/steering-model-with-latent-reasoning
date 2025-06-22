@@ -218,7 +218,7 @@ match args["model_name"]:
 
 if args["with_intervention"]:
   print("Removing projection hooks from the model.")
-  remove_hooks(model._model, hooks)
+  remove_hooks(hooks)
 
 # %%
 
@@ -243,11 +243,16 @@ output_key = ' '.join(
   [
     f"{key}={value}"
     for key, value in args.items()
-    if key in [
-      'huginn_model_criterion', 
-      'tasks', 
-      'num_fewshot', 
+    if key in [ 
+      'tasks',
+      'num_fewshot',
+      'limit',
       'huginn_num_steps',
+      'with_intervention',
+      'layer_indices',
+      'with_pre_hook',
+      'with_post_hook',
+      'scale',
     ]
   ]
 )
