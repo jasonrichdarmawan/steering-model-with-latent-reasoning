@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if True:
+if False:
   import sys
   from importlib import reload
 
@@ -45,7 +45,7 @@ from lm_eval import simple_evaluate
 
 # %%
 
-if True:
+if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")

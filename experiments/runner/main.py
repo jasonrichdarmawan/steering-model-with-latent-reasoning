@@ -21,7 +21,7 @@ import os
 import subprocess
 import sys
 
-if True:
+if False:
   from importlib import reload
   import sys
   print("Reloading modules to ensure the latest code is used.")
@@ -31,7 +31,7 @@ if True:
 
 # %%
 
-if True:
+if False:
   print("Programatically setting sys.argv for testing purposes.")
   root_path = "/media/tao/disk4T/jason"
   sys.argv = [
