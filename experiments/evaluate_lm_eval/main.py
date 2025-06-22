@@ -56,9 +56,9 @@ if False:
 
     '--tasks', 'mmlu',
     '--num_fewshot', '5',
-    '--batch_size', '4',
-    '--limit', '50',
-    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.pt',
+    '--batch_size', '1',
+    '--limit', '14',
+    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.json',
   ]
 
 args = parse_args()
@@ -135,7 +135,8 @@ match args["model_name"]:
       num_fewshot=args["num_fewshot"],
       limit=args["limit"],
       gen_kwargs=f"num_steps={args['huginn_num_steps']}",
-    )
+    )["results"]
+    print(f"Evaluation results:\n{results}")
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 

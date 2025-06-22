@@ -49,7 +49,7 @@ def set_up_experiment_jobs(workspace_path: str):
   --batch_size 1 \
   --limit 14 \
   \
-  --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.pt"
+  --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.json"
   """
 
   EVALUATE_REASONING_MEMORIZING_WITH_INTERVENTION_CMD = f"""\
