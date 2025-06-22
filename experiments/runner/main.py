@@ -1,5 +1,16 @@
 # %%
 
+import os
+import sys
+
+# To be able to import modules from the utils
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if project_root not in sys.path:
+  print(f"Adding project root to sys.path: {project_root}")
+  sys.path.insert(0, project_root)
+
+# %%
+
 from runner_utils import parse_args
 from runner_utils import set_up_jobs
 
@@ -8,8 +19,9 @@ from datetime import datetime
 from typing import Optional
 import os
 import subprocess
+import sys
 
-if False:
+if True:
   from importlib import reload
   import sys
   print("Reloading modules to ensure the latest code is used.")
@@ -19,13 +31,13 @@ if False:
 
 # %%
 
-if False:
+if True:
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/media/tao/disk4T/jason/recurrent-env"
+  root_path = "/media/tao/disk4T/jason"
   sys.argv = [
     'main.py',
     '--workspace_path', root_path,
-    '--jobs', 'mmlu',
+    '--jobs', 'mmlu_evaluate_lm_eval_with_intervention',
     '--output_path', f'{root_path}/experiments/runner',
   ]
 
@@ -93,11 +105,10 @@ with open(file_path, 'w', encoding='utf-8') as f:
     for j, cmd in enumerate(job):
       print(f"\nRunning command {i+1}/{len(EXPERIMENT_JOBS)}.")
       print("#" * 60)
-      print(f"Command: {cmd}")
-      # Reference:
-      # https://stackoverflow.com/a/21978778/13285583
+      print(f"Command:\n{cmd}")
       process = subprocess.Popen(
         cmd,
+        cwd=project_root,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -11,7 +11,7 @@ if project_root not in sys.path:
 
 # %%
 
-if False:
+if True:
   import sys
   from importlib import reload
 
@@ -21,14 +21,23 @@ if False:
   reload(sys.modules.get('ele_utils', sys))
 
   reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
-  reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
   reload(sys.modules.get('utils.huginn_wrapper', sys))
+  reload(sys.modules.get('utils.load_json_dataset', sys))
+  reload(sys.modules.get('utils.load_hidden_states_cache', sys))
+  reload(sys.modules.get('utils.compute_candidate_directions', sys))
+  reload(sys.modules.get('utils.projection_hook', sys))
   reload(sys.modules.get('utils', sys))
 
 from ele_utils import parse_args
 
 from utils import use_deterministic_algorithms
 from utils import HuginnWrapper
+from utils import load_json_dataset
+from utils import load_hidden_states_cache
+from utils import compute_candidate_directions
+from utils import ProjectionHookConfig
+from utils import set_activations_hooks
+from utils import remove_hooks
 
 from os.path import join
 import torch
@@ -36,11 +45,11 @@ from lm_eval import simple_evaluate
 
 # %%
 
-if False:
+if True:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/home/npu-tao/jason"
+  root_path = "/media/tao/disk4T/jason"
   sys.argv = [
     'main.py',
     '--use_local_datasets',
@@ -54,10 +63,15 @@ if False:
     '--huginn_model_criterion', 'entropy-diff',
     '--huginn_num_steps', '32',
 
+    '--with_intervention',
+    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
+    '--layer_indices', '66',
+    '--with_post_hook',
+
     '--tasks', 'mmlu',
-    '--num_fewshot', '5',
+    '--num_fewshot', '0',
     '--batch_size', '1',
-    '--limit', '14',
+    '--limit', '1',
     '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.json',
   ]
 
@@ -100,6 +114,66 @@ match args["model_name"]:
 
 # %%
 
+if args["with_intervention"]:
+  print("Loading mmlu-pro-3000samples dataset for intervention.")
+  file_path = os.path.join(
+    args['data_path'],
+    "lirefs",
+    "mmlu-pro-3000samples.json"
+  )
+  mmlu_pro_3000samples_dataset = load_json_dataset(
+    file_path=file_path,
+  )
+
+  reasoning_indices = [
+    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+    if sample['memory_reason_score'] > 0.5
+  ]
+  memorizing_indices = [
+    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
+    if sample['memory_reason_score'] <= 0.5
+  ]
+
+# %%
+
+if args["with_intervention"]:
+  print("Loading hidden states cache for intervention.")
+  hidden_states_cache = load_hidden_states_cache(
+    file_path=args['hidden_states_cache_file_path'],
+  )
+
+  candidate_directions = compute_candidate_directions(
+    hidden_states_cache=hidden_states_cache,
+    reasoning_indices=reasoning_indices,
+    memorizing_indices=memorizing_indices,
+    dtype=model._model.dtype
+  )
+else:
+  print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
+  candidate_directions = None
+
+# %%
+
+if args['with_intervention']:
+  print("Setting up projection hooks for the model.")
+  projection_hook_config = ProjectionHookConfig(
+    layer_indices=args['layer_indices'],
+    candidate_directions=candidate_directions,
+    pre_hook=args['with_pre_hook'],
+    post_hook=args['with_post_hook'],
+    scale=args['scale']
+  )
+
+  hooks = set_activations_hooks(
+    model=model._model,
+    candidate_directions=candidate_directions,
+    config=projection_hook_config,
+  )
+else:
+  print("No intervention hooks set up, proceeding without them.")
+
+# %%
+
 if args["use_local_datasets"]:
   from typing import Optional, Any
   import datasets
@@ -139,6 +213,12 @@ match args["model_name"]:
     print(f"Evaluation results:\n{results}")
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
+
+# %%
+
+if args["with_intervention"]:
+  print("Removing projection hooks from the model.")
+  remove_hooks(model._model, hooks)
 
 # %%
 
