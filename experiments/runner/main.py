@@ -1,7 +1,7 @@
 # %%
 
 from runner_utils import parse_args
-from runner_utils import set_up_experiment_jobs
+from runner_utils import set_up_jobs
 
 from typing import TypedDict
 from datetime import datetime
@@ -9,20 +9,23 @@ from typing import Optional
 import os
 import subprocess
 
-if True:
+if False:
   from importlib import reload
   import sys
   print("Reloading modules to ensure the latest code is used.")
-  reload(sys.modules.get('experiment_jobs', sys))
+  reload(sys.modules.get('runner_utils.parse_args', sys))
+  reload(sys.modules.get('runner_utils.set_up_jobs', sys))
+  reload(sys.modules.get('runner_utils', sys))
 
 # %%
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/home/npu-tao/jason"
+  root_path = "/media/tao/disk4T/jason/recurrent-env"
   sys.argv = [
     'main.py',
     '--workspace_path', root_path,
+    '--jobs', 'mmlu',
     '--output_path', f'{root_path}/experiments/runner',
   ]
 
@@ -33,13 +36,16 @@ print(args)
 
 # %%
 
-EXPERIMENT_JOBS = set_up_experiment_jobs(args['workspace_path'])
-
-if False:
-  print("Only running some experiments for testing purposes.")
-  EXPERIMENT_JOBS = [
-    EXPERIMENT_JOBS[0][2:]
-  ]
+EXPERIMENT_JOBS = set_up_jobs(
+  workspace_path=args['workspace_path'],
+  jobs=args["jobs"],
+)
+print(f"Set up jobs for experiments:")
+print('#' * 60)
+for i, job in enumerate(EXPERIMENT_JOBS):
+  print(f"Experiment {i+1}:")
+  for j, cmd in enumerate(job):
+    print(f"Command {j+1}:\n{cmd}")
 
 # %%
 

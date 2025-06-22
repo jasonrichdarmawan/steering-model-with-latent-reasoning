@@ -14,7 +14,13 @@ def parse_args() -> Args:
     '--workspace_path',
     type=str,
     help="Path to the workspace directory where experiments will be run.",
-    default="/home/npu-tao/jason/experiments/runner",
+  )
+  
+  parser.add_argument(
+    '--jobs',
+    type=str,
+    nargs='+',
+    help="List of jobs to run. Each job should be a string representing the job name.",
   )
   
   parser.add_argument(

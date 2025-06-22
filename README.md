@@ -1,65 +1,34 @@
 # How to save hidden states
 
 ```shell
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/home/npu-tao/jason
 
-python experiments/save_hidden_states/main.py \
---models_path "$WORKSPACE_PATH/transformers" \
---model_name huginn-0125 \
-\
---data_file_path "$WORKSPACE_PATH/datasets/lirefs/mmlu-pro-3000samples.json" \
---data_name mmlu-pro-3000samples \
-\
---output_file_path "$WORKSPACE_PATH/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt"
+python experiments/runner/main.py
+--workspace_path "$WORKSPACE_PATH"
+--jobs mmlu_pro_save_hidden_states
+--output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
 # How to evaluate accuracy reasoning and memorization
 
 ```bash
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/home/npu-tao/jason
 
-python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
---models_path "$WORKSPACE_PATH/transformers" \
---model_name huginn-0125 \
---device auto \
-\
---huginn_num_steps 32 \
-\
---hidden_states_cache_file_path "$WORKSPACE_PATH/experiments/hidden_states_cache" \
---mmlu_pro_3000samples_data_file_path "$WORKSPACE_PATH/datasets/lirefs/mmlu-pro-3000samples.json" \
-\
---test_data_path "$WORKSPACE_PATH/datasets/lirefs" \
---test_data_name mmlu-pro-3000samples \
---with_fewshot_prompts \
---batch_size 1 \
-\
---with_intervention \
---layer_indices 66 \
---with_post_hook \
-\
---output_file_path "$WORKSPACE_PATH/experiments/reasoning_memorizing_accuracy/huginn-0125.json"
+python experiments/runner/main.py
+--workspace_path "$WORKSPACE_PATH"
+--jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention
+--output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
 # How to evaluate with lm_eval
 
 ```bash
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/home/npu-tao/jason
 
-python experiments/evaluate_lm_eval/main.py \
---use_local_datasets \
---data_path "$WORKSPACE_PATH/datasets" \
-\
---models_path "$WORKSPACE_PATH/transformers" \
---model_name huginn-0125 \
-\
---huginn_num_steps 32 \
-\
---tasks mmlu \
---num_fewshot 5 \
---batch_size 4 \
---limit 50 \
-\
---output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.json"
+python experiments/runner/main.py
+--workspace_path "$WORKSPACE_PATH"
+--jobs mmlu_evaluate_lm_eval
+--output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
 # How to test
