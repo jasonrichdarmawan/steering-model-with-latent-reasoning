@@ -1,4 +1,3 @@
-from typing import TypedDict
 import torch
 from torch import nn
 from transformers import GenerationConfig, PreTrainedTokenizerBase
@@ -35,7 +34,7 @@ def generate_sentences_huginn(
     add_special_tokens=False,
     padding="longest",
     return_token_type_ids=False,
-  ).input_ids.to("cuda")
+  ).input_ids.to(model.device)
 
   with torch.no_grad():
     outputs = model.generate(

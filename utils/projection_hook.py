@@ -40,10 +40,6 @@ def set_activations_hooks(
   
   return hooks
 
-def remove_hooks(hooks: list[RemovableHandle]):
-  for hook in hooks:
-    hook.remove()
-
 class ProjectionPreHook:
   def __init__(
     self,
@@ -62,7 +58,7 @@ class ProjectionPreHook:
     args,
     kwargs,
   ):
-    depth_index: int = kwargs["step_idx"]
+    depth_index: int = kwargs["depth_idx"]
     if ( 
       depth_index in module.depth_indices
       and depth_index in self.selected_depth_indices
@@ -70,7 +66,6 @@ class ProjectionPreHook:
       direction = self.candidate_directions[depth_index]
       projection = (kwargs["x"] @ direction).unsqueeze(-1) * direction  # (batch, sequence_length, 1)
       kwargs["x"][:, :, :] = kwargs["x"] + self.scale * projection
-      return
 
 class ProjectionPostHook:
   def __init__(
@@ -91,7 +86,7 @@ class ProjectionPostHook:
     kwargs,
     output: tuple[Tensor, ...]
   ):
-    depth_index: int = kwargs["step_idx"]
+    depth_index: int = kwargs["depth_idx"]
     if ( 
       (depth_index in module.depth_indices)
       and depth_index in self.selected_depth_indices
@@ -99,7 +94,6 @@ class ProjectionPostHook:
       direction = self.candidate_directions[depth_index]
       projection = (output[0] @ direction).unsqueeze(-1) * direction # (batch, sequence_length, 1)
       output[0][:, :, :] = output[0] + self.scale * projection
-      return
 
 def _set_activations_hooks_huginn(
   model: nn.Module,
@@ -131,32 +125,35 @@ def _set_activations_hooks_huginn(
       module = model.transformer.core_block[layer_indices[1]]
     elif layer_indices[0] < coda_last_layer_index:
       module = model.transformer.coda[layer_indices[1]]
+    # TODO: re-do the experiment with the final layer normalization
+    # elif layer_indices[0] == model.config.effective_expected_depth:
+    #   module = model.transformer.ln_f
     else:
       raise ValueError(f"Module with layer index {layer_indices[0]} is out of bounds for the model.")
 
     if config["pre_hook"]:
-      print(f"Registering pre-hook for module with layer indices: {layer_indices} and depth indices: {depth_indices}")
+      print(f"Registering pre-hook for module with layer indices: absolute index {layer_indices[0]}, relative index {layer_indices[1]} and depth indices: {depth_indices}")
       pre_hook = ProjectionPreHook(
         selected_depth_indices=depth_indices,
         candidate_directions=candidate_directions,
         scale=config["scale"]
       )
       hook = module.register_forward_pre_hook(
-        pre_hook,
-        with_kwargs=True
+        hook=pre_hook,
+        with_kwargs=True,
       )
       hooks.append(hook)
 
     if config["post_hook"]:
-      print(f"Registering post-hook for module with layer indices {layer_indices} and depth indices: {depth_indices}")
+      print(f"Registering post-hook for module with absolute index {layer_indices[0]}, relative index {layer_indices[1]} and depth indices: {depth_indices}")
       post_hook = ProjectionPostHook(
         selected_depth_indices=depth_indices,
         candidate_directions=candidate_directions,
         scale=config["scale"]
       )
       hook = module.register_forward_hook(
-        post_hook,
-        with_kwargs=True
+        hook=post_hook,
+        with_kwargs=True,
       )
       hooks.append(hook)
   
@@ -177,10 +174,16 @@ def _batch_depths_by_recurrence(
 
   coda_first_layer_index = n_layers_in_prelude + n_layers_in_recurrent_block
 
+  # effective_expected_depth = n_layers_in_prelude + (
+  #   n_layers_in_recurrent_block * mean_recurrence
+  # ) + n_layers_in_coda
+
   layer_indices_batched: dict[tuple[int, int], list[int]] = {}
   for depth_index in depth_indices:
+    # prelude
     if depth_index < n_layers_in_prelude:
       batch_index = (depth_index, depth_index)
+    # core block
     elif depth_index < core_block_last_depth_index:
       absolute_index = n_layers_in_prelude + (
         (depth_index - n_layers_in_prelude)
@@ -190,6 +193,7 @@ def _batch_depths_by_recurrence(
         absolute_index, 
         absolute_index - n_layers_in_prelude # relative index
       )
+    # coda
     elif depth_index < coda_last_depth_index:
       absolute_index = coda_first_layer_index + (
         (depth_index - core_block_last_depth_index)
@@ -199,9 +203,16 @@ def _batch_depths_by_recurrence(
         absolute_index, 
         absolute_index - coda_first_layer_index # relative index
       )
+    # ln_f
+    # TODO: re-do the experiment with the final layer normalization
+    # elif depth_index == effective_expected_depth:
+    #   batch_index = (depth_index, 0)
     else:
       raise ValueError(f"Layer index {depth_index} is out of bounds for the model.")
+    
     if batch_index not in layer_indices_batched:
       layer_indices_batched[batch_index] = []
+  
     layer_indices_batched[batch_index].append(depth_index)
+
   return layer_indices_batched

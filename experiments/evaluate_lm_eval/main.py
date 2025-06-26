@@ -37,7 +37,6 @@ from utils import load_hidden_states_cache
 from utils import compute_candidate_directions
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
-from utils import remove_hooks
 
 from os.path import join
 import torch
@@ -143,10 +142,10 @@ if args["with_intervention"]:
   )
 
   candidate_directions = compute_candidate_directions(
+    model=model,
     hidden_states_cache=hidden_states_cache,
     reasoning_indices=reasoning_indices,
     memorizing_indices=memorizing_indices,
-    dtype=model._model.dtype
   )
 else:
   print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
@@ -218,7 +217,8 @@ match args["model_name"]:
 
 if args["with_intervention"]:
   print("Removing projection hooks from the model.")
-  remove_hooks(hooks)
+  for hook in hooks:
+    hook.remove()
 
 # %%
 

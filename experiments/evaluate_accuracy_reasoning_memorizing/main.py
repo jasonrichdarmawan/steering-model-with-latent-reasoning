@@ -43,7 +43,7 @@ from utils import prepare_fewshot_prompts
 from utils import prepare_queries
 from utils import generate_sentences_huginn
 from utils import ProjectionHookConfig
-from utils import set_activations_hooks, remove_hooks
+from utils import set_activations_hooks
 from utils import set_model_predict_correctness
 
 from tqdm import tqdm
@@ -96,7 +96,7 @@ use_deterministic_algorithms()
 model, tokenizer = load_model_and_tokenizer(
   models_path=args['models_path'],
   model_name=args['model_name'],
-  device=args["device"],
+  device_map=args["device"],
 )
 
 # %%
@@ -129,10 +129,10 @@ if args['with_intervention']:
   )
 
   candidate_directions = compute_candidate_directions(
+    model=model,
     hidden_states_cache=hidden_states_cache,
     reasoning_indices=reasoning_indices,
     memorizing_indices=memorizing_indices,
-    dtype=model.dtype
   )
 else:
   print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
@@ -263,7 +263,9 @@ for queries_batch, entries_batch in tqdm(
   torch.cuda.empty_cache()
     
 if args['with_intervention']:
-  remove_hooks(hooks)
+  print("Removing projection hooks from the model.")
+  for hook in hooks:
+    hook.remove()
 
 # %%
 

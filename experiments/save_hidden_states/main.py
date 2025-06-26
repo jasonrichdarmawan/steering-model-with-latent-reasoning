@@ -38,8 +38,6 @@ from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import load_and_sample_test_dataset
 from utils import prepare_queries
-from utils import get_n_layers
-from utils import get_n_embd
 from utils import cache_hidden_states
 
 import torch
@@ -122,17 +120,9 @@ queries_batched = [
 
 # %%
 
-n_layers = get_n_layers(model)
-n_embd = get_n_embd(model)
-
 hidden_states_cache: dict[
   int, Float[Tensor, "seq_len n_embd"]
-] = {
-  index: torch.empty(
-    (0, n_embd), dtype=model.dtype,
-  )
-  for index in range(n_layers)
-}
+] = None
 
 for queries_batch in tqdm(queries_batched):
   hidden_states_cache = cache_hidden_states(

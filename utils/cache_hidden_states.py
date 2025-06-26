@@ -9,17 +9,6 @@ def cache_hidden_states(
   queries_batch: list[list[str]],
   hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]] | None = None,
 ):
-  if hidden_states_cache is None:
-    n_layers = get_n_layers(model)
-    n_embd = get_n_embd(model)
-
-    hidden_states_cache = {
-      index: torch.empty(
-        (0, n_embd), dtype=model.dtype,
-      )
-      for index in range(n_layers)
-    }
-
   match model.config.model_type:
     case name if name.startswith("huginn_"):
       hidden_states_cache = _cache_hidden_states_huginn(
@@ -28,12 +17,16 @@ def cache_hidden_states(
         queries_batch=queries_batch,
         hidden_states_cache=hidden_states_cache,
       )
+    case _:
+      raise ValueError(f"Unsupported model type: {model.config.model_type}")
 
   return hidden_states_cache
 
 def get_n_layers(model) -> int:
   match model.config.model_type:
     case name if name.startswith("huginn_"):
+      # TODO: re-do the experiment with the final layer normalization
+      # return model.config.effective_expected_depth + 1
       return model.config.effective_expected_depth
     case _:
       print("Model type not recognized for n_layers retrieval.")
@@ -51,12 +44,8 @@ def _cache_hidden_states_huginn(
   model,
   tokenizer: PreTrainedTokenizerBase,
   queries_batch: list[list[str]],
-  hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]],
+  hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]] | None = None,
 ):
-  n_layers_to_cache = list(
-    range(get_n_layers(model))
-  )
-
   inputs = tokenizer(
     queries_batch,
     return_tensors="pt",
@@ -75,13 +64,29 @@ def _cache_hidden_states_huginn(
         "return_stats": False,
       }
     )
+  
+  n_layers_to_cache = range(get_n_layers(model))
+  
+  if hidden_states_cache is None:
+    n_embd = get_n_embd(model)
 
-  for layer in n_layers_to_cache:
+    hidden_states_cache = {
+      index: torch.empty(
+        (0, n_embd), dtype=model.dtype,
+      )
+      for index in n_layers_to_cache
+    }
+
+  for layer_index in n_layers_to_cache:
+    hidden_state = outputs["hidden_states"].get(layer_index)
+    if hidden_state is None:
+      continue
+
     # Tensor.detach() is important to avoid torch.OutOfMemoryError
-    hidden_states_cache[layer] = torch.cat(
+    hidden_states_cache[layer_index] = torch.cat(
       (
-        hidden_states_cache[layer],
-        outputs["hidden_states"][layer][:, -1, :].detach().cpu()
+        hidden_states_cache[layer_index],
+        hidden_state[:, -1, :].detach().cpu()
       ),
       dim=0
     )

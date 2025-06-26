@@ -18,6 +18,7 @@ from transformers.generation.utils import GenerateDecoderOnlyOutput
 import torch.nn.functional as F
 from transformers import GenerationConfig
 
+from jaxtyping import Float
 
 class RavenPreTrainedModel(PreTrainedModel):
     config_class = RavenConfig
@@ -307,14 +308,24 @@ class SandwichBlock(torch.nn.Module):
         x: Tensor,
         freqs_cis: Tensor,
         step_idx: int,
+        depth_idx: int,
         mask: Optional[Tensor] = None,
         past_key_values: Optional[Cache] = None,
         return_attn: bool = False,
-    ) -> tuple[Tensor, Optional[Tensor]]:
+        return_head: bool = False,
+        all_hidden_states: dict[int, Float[Tensor, "batch seq_len n_embd"]] = {},
+    ):
+        """
+        depth_idx is used to determine the depth of the block in the model, which is used for hooks
+        """
         attn_out, attn_map = self.attn(self.norm_1(x), freqs_cis, step_idx, mask, past_key_values, return_attn)
         x = self.norm_2(attn_out + x)
         x = self.norm_4(self.mlp(self.norm_3(x)) + x)
-        return x, attn_map
+
+        if return_head:
+            all_hidden_states[depth_idx] = x
+
+        return x, attn_map, all_hidden_states
 
 
 class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
@@ -342,8 +353,8 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
                 layer_id=i + config.n_layers_in_prelude,
                 depth_indices=list(
                     range(
-                        config.n_layers_in_prelude, 
-                        o, 
+                        i + config.n_layers_in_prelude, 
+                        o + 1,
                         config.n_layers_in_recurrent_block
                     )
                 )
@@ -430,28 +441,33 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         return_attn = output_details["return_attention"]
 
         return_head = output_details["return_head"]
-        all_hidden_states = ()
+        all_hidden_states: dict[int, Float[Tensor, "batch seq_len n_embd"]] = {}
 
         # Non-recurrent prelude
         for block_idx, block in enumerate(self.transformer.prelude):
-            input_embeds, attn_map = block(
-                input_embeds, freqs_cis, block_idx, attention_mask, past_key_values, return_attn=return_attn
+            input_embeds, attn_map, all_hidden_states = block(
+                x=input_embeds,
+                freqs_cis=freqs_cis,
+                step_idx=block_idx,
+                depth_idx=block.layer_id,
+                mask=attention_mask,
+                past_key_values=past_key_values,
+                return_attn=return_attn,
+                return_head=return_head,
+                all_hidden_states=all_hidden_states,
             )
             attn_maps[block_idx] = attn_map
 
-            if return_head:
-                all_hidden_states += (input_embeds,)
-
         # Main recurrence
         x, num_steps_no_grad, num_steps_with_grad, xk, block_idx, attn_maps, all_hidden_states = self.iterate_forward(
-            input_embeds,  # type: ignore
-            input_states,
-            freqs_cis,
-            block_idx,
-            attention_mask,
-            past_key_values,
-            num_steps,
-            attn_maps,
+            input_embeds=input_embeds,  # type: ignore
+            input_states=input_states,
+            freqs_cis=freqs_cis,
+            block_idx=block_idx,
+            mask=attention_mask,
+            past_key_values=past_key_values,
+            num_steps=num_steps,
+            attn_maps=attn_maps,
             return_attn=return_attn,
             return_head=return_head,
             all_hidden_states=all_hidden_states,
@@ -460,15 +476,22 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
 
         # Coda layers
         for block_idx, block in enumerate(self.transformer.coda, start=1):
-            x, attn_map = block(x, freqs_cis, -block_idx, attention_mask, past_key_values, return_attn=return_attn)
+            x, attn_map, all_hidden_states = block(
+                x=x,
+                freqs_cis=freqs_cis,
+                step_idx=-block_idx,
+                depth_idx=block.layer_id,
+                mask=attention_mask,
+                past_key_values=past_key_values,
+                return_attn=return_attn,
+                return_head=return_head,
+                all_hidden_states=all_hidden_states,
+            )
             attn_maps[-block_idx] = attn_map
-
-            if return_head:
-                all_hidden_states += (x,)
 
         x = self.transformer.ln_f(x)
         if return_head:
-            all_hidden_states += (x,)
+            all_hidden_states[self.config.effective_expected_depth] = x
 
         # Prediction head, assuming labels really are labels and not equal to input_ids
         if labels is not None:
@@ -505,7 +528,7 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         attn_maps: dict = {},
         return_attn: bool = False,
         return_head: bool = False,
-        all_hidden_states: tuple[torch.Tensor] = (),
+        all_hidden_states: dict[int, Float[Tensor, "batch seq_len n_embd"]] = {},
     ):
         x = xk = self.initialize_state(input_embeds) if input_states is None else input_states.clone()
         if num_steps is None:
@@ -562,21 +585,22 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         attn_maps: dict = {},
         return_attn: bool = False,
         return_head: bool = False, 
-        all_hidden_states: tuple[torch.Tensor] = (),
+        all_hidden_states: dict[int, Float[Tensor, "batch seq_len n_embd"]] = {},
     ):
         x = self.transformer.adapter(torch.cat([x, input_embeds.to(x.device)], dim=-1))
         for idx, block in enumerate(self.transformer.core_block, start=1):
-            x, attn_map = block(
+            x, attn_map, all_hidden_states = block(
                 x=x,
                 freqs_cis=freqs_cis, 
                 step_idx=block_idx + idx, 
+                depth_idx=block_idx + idx,
                 mask=mask, 
                 past_key_values=past_key_values, 
                 return_attn=return_attn,
+                return_head=return_head,
+                all_hidden_states=all_hidden_states,
             )
             attn_maps[block_idx + idx] = attn_map
-            if return_head:
-                all_hidden_states += (x,)
         return x, block_idx + idx, attn_maps, all_hidden_states
 
     @torch.no_grad()

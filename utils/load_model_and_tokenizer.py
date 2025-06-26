@@ -13,12 +13,12 @@ from models import recpre
 def load_model_and_tokenizer(
   models_path: str, 
   model_name: str,
-  device: str = "cuda" if torch.cuda.is_available() else "cpu",
+  device_map: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
   model = load_model(
     models_path=models_path, 
     model_name=model_name,
-    device=device,
+    device_map=device_map,
   )
 
   tokenizer: PreTrainedTokenizerFast = load_tokenizer(
@@ -31,7 +31,7 @@ def load_model_and_tokenizer(
 def load_model(
   models_path: str, 
   model_name: str, 
-  device: str
+  device_map: str
 ):
   torch_dtype = torch.float32
   trust_remote_code = True
@@ -50,7 +50,7 @@ def load_model(
     join(models_path, model_name),
     torch_dtype=torch_dtype,
     trust_remote_code=trust_remote_code,
-    device_map=device,
+    device_map=device_map,
   )
 
   return model
