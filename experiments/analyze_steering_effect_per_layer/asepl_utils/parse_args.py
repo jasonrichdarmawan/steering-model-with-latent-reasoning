@@ -18,6 +18,8 @@ class Args(TypedDict):
   with_post_hook: bool
   projection_scale: float
 
+  output_file_path: str | None
+
 def parse_args() -> Args:
   parser = argparse.ArgumentParser(
     description="Parse arguments for ASEPL experiment."
@@ -89,6 +91,12 @@ def parse_args() -> Args:
     type=float,
     default=0.1,
     help='Scale factor for the projection in the intervention.'
+  )
+
+  parser.add_argument(
+    '--output_file_path',
+    type=str,
+    help='Path to the file where the output results will be saved.'
   )
 
   args = parser.parse_args()

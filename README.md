@@ -9,6 +9,17 @@ python experiments/runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
+# How to analyze steering effect per layer
+
+```bash
+WORKSPACE_PATH="/home/npu-tao/jason"
+
+python experiments/runner/main.py \
+--workspace_path "$WORKSPACE_PATH" \
+--jobs mmlu_pro_analyze_steering_effect_per_layer \
+--output_path "$WORKSPACE_PATH/experiments/runner"
+```
+
 # How to evaluate accuracy reasoning and memorization
 
 ```bash

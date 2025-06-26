@@ -67,13 +67,15 @@ if False:
     '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
     '--data_path', f'{root_path}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples.json',
-    '--data_sample_size', '12',
+    '--data_sample_size', '24',
     '--data_batch_size', '1',
 
     '--huginn_num_steps', '32',
 
     '--with_post_hook',
     '--projection_scale', '0.1',
+
+    '--output_file_path', f'{root_path}/experiments/analyze_steering_effect_per_layer/huginn-0125.json',
   ]
 
 args = parse_args()
@@ -225,9 +227,6 @@ match model.config.model_type:
     effects = [0 for _ in range(n_layers)]
 
     for queries_batch in tqdm(queries_batched):
-      model.zero_grad()
-      gradients.clear()
-
       input_ids = tokenizer(
         queries_batch,
         return_tensors='pt',
@@ -238,7 +237,7 @@ match model.config.model_type:
 
       outputs = model(
         input_ids=input_ids,
-        num_steps=(0,32),
+        num_steps=(0, args["huginn_num_steps"]),
         output_details={
           "return_logits": True,
           "return_latents": False,
@@ -257,14 +256,19 @@ match model.config.model_type:
           @ candidate_directions[layer_index]
         ).mean().abs()
         effects[layer_index] += effect.item()
-      
+
       del input_ids
       del outputs
       del loss
+      model.zero_grad()
+      gradients.clear()
       gc.collect()
       torch.cuda.empty_cache()
   case _:
     raise ValueError(f"Model type {model.config.model_type} is not supported.")
+
+print("Effects per layer:")
+print(effects)
 
 # %%
 
@@ -273,5 +277,56 @@ for activations_hook in activations_hooks:
   activations_hook.remove()
 for save_grad_hook in save_grad_hooks:
   save_grad_hook.remove()
+
+# %%
+
+if args['output_file_path'] is None:
+  print("No output path specified. Results will not be saved.")
+  sys.exit(0)
+
+try:
+  print(f"Loading existing results from: {args['output_file_path']}")
+  output = torch.load(
+    args["output_file_path"],
+    map_location='cpu',
+    weights_only=False,
+  )
+except FileNotFoundError:
+  print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
+  output = {}
+
+# %%
+
+output_key = ' '.join(
+  [
+    f"{key}={value}"
+    for key, value in args.items()
+    if key in [
+      'model_name',
+
+      'data_name',
+      'data_sample_size',
+
+      'huginn_num_steps',
+
+      'with_pre_hook',
+      'with_post_hook',
+      'projection_scale',
+    ]
+  ]
+)
+print(f"Using output key: {output_key}")
+
+# %%
+
+output[output_key] = effects
+
+# %%
+
+output_path = os.path.dirname(args['output_file_path'])
+os.makedirs(output_path, exist_ok=True)
+
+print(f"Saving evaluation results to: {args['output_file_path']}")
+torch.save(output, args['output_file_path'])
 
 # %%
