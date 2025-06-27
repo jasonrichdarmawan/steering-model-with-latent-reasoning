@@ -142,7 +142,7 @@ if args["with_intervention"]:
   )
 
   candidate_directions = compute_candidate_directions(
-    model=model,
+    model=model.model,
     hidden_states_cache=hidden_states_cache,
     reasoning_indices=reasoning_indices,
     memorizing_indices=memorizing_indices,
@@ -164,7 +164,7 @@ if args['with_intervention']:
   )
 
   hooks = set_activations_hooks(
-    model=model._model,
+    model=model.model,
     candidate_directions=candidate_directions,
     config=projection_hook_config,
   )

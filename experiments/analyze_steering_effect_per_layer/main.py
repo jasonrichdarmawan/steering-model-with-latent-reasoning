@@ -39,7 +39,6 @@ from utils import load_json_dataset
 from utils import load_hidden_states_cache
 from utils import compute_candidate_directions
 from utils import prepare_queries
-from utils import get_n_layers
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
 
@@ -188,11 +187,11 @@ queries_batched = [
 
 # %%
 
-n_layers = get_n_layers(model)
+layer_indices = list(candidate_directions.keys())
 
 print("Setting up activations hooks for the model.")
 projection_hook_config = ProjectionHookConfig(
-  layer_indices=range(n_layers),
+  layer_indices=layer_indices,
   candidate_directions=candidate_directions,
   pre_hook=args["with_pre_hook"],
   post_hook=args["with_post_hook"],
@@ -224,7 +223,7 @@ def compute_kl_divergence(logits: Float[Tensor, "batch seq_len n_embd"]):
 
 match model.config.model_type:
   case name if name.startswith("huginn_"):
-    effects = [0 for _ in range(n_layers)]
+    effects = [0] * len(layer_indices)
 
     for queries_batch in tqdm(queries_batched):
       input_ids = tokenizer(
@@ -233,7 +232,7 @@ match model.config.model_type:
         add_special_tokens=False,
         padding='longest',
         return_token_type_ids=False,
-      ).input_ids.to(device=model.device)
+      ).input_ids
 
       outputs = model(
         input_ids=input_ids,
@@ -250,7 +249,9 @@ match model.config.model_type:
       loss = compute_kl_divergence(outputs["logits"])
       loss.backward()
 
-      for layer_index in range(n_layers):
+      for layer_index in list(
+        gradients.keys() & candidate_directions.keys()
+      ):
         effect = (
           gradients[layer_index]
           @ candidate_directions[layer_index]

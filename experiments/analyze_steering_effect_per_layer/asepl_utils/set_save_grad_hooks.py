@@ -67,15 +67,14 @@ def _save_grad_hooks_huginn(
     )
     hooks.append(hook)
 
-  # TODO: re-do the experiment with the final layer normalization
   # Registering save_grad hook for final layer normalization
-  # print("Registering save_grad hook for final layer normalization.")
-  # hook = model.transformer.ln_f.register_full_backward_pre_hook(
-  #   hook=lambda module, grad_output, depth_index=model.config.effective_expected_depth: gradients.update({
-  #     depth_index: grad_output[0],
-  #   }),
-  # )
-  # hooks.append(hook)
+  print("Registering save_grad hook for final layer normalization.")
+  hook = model.transformer.ln_f.register_full_backward_pre_hook(
+    hook=lambda module, grad_output, depth_index=model.config.effective_expected_depth: gradients.update({
+      depth_index: grad_output[0],
+    }),
+  )
+  hooks.append(hook)
 
   outputs = (hooks, gradients)
 

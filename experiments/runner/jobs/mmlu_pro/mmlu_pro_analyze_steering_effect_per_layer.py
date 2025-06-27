@@ -11,7 +11,7 @@ python experiments/analyze_steering_effect_per_layer/main.py \
 --data_name mmlu-pro-3000samples.json \
 --data_batch_size 1 \
 \
---huginn_num_steps 32 \
+--huginn_num_steps 16 \
 \
 --with_post_hook \
 --projection_scale 0.1 \

@@ -25,9 +25,7 @@ def cache_hidden_states(
 def get_n_layers(model) -> int:
   match model.config.model_type:
     case name if name.startswith("huginn_"):
-      # TODO: re-do the experiment with the final layer normalization
-      # return model.config.effective_expected_depth + 1
-      return model.config.effective_expected_depth
+      return model.config.effective_expected_depth + 1
     case _:
       print("Model type not recognized for n_layers retrieval.")
       return 0
