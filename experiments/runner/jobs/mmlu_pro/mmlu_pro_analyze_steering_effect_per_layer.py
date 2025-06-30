@@ -16,7 +16,7 @@ python experiments/analyze_steering_effect_per_layer/main.py \
 --with_post_hook \
 --projection_scale 0.1 \
 \
---output_file_path "$WORKSPACE_PATH/experiments/analyze_steering_effect_per_layer/huginn-0125.json"
+--output_path "$WORKSPACE_PATH/experiments/analyze_steering_effect_per_layer/huginn-0125"
 """
 
 def get_mmlu_pro_analyze_steering_effect_per_layer(workspace_path: str) -> str:

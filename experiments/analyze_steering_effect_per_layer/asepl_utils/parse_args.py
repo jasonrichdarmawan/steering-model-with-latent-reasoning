@@ -18,7 +18,7 @@ class Args(TypedDict):
   with_post_hook: bool
   projection_scale: float
 
-  output_file_path: str | None
+  output_path: str | None
 
 def parse_args() -> Args:
   parser = argparse.ArgumentParser(
@@ -94,9 +94,9 @@ def parse_args() -> Args:
   )
 
   parser.add_argument(
-    '--output_file_path',
+    '--output_path',
     type=str,
-    help='Path to the file where the output results will be saved.'
+    help='Path to save the output results of the experiment. If not provided, results will not be saved.',
   )
 
   args = parser.parse_args()

@@ -19,6 +19,8 @@ if False:
   
   reload(sys.modules.get('asepl_utils.parse_args', sys))
   reload(sys.modules.get('asepl_utils.set_save_grad_hooks', sys))
+  reload(sys.modules.get('asepl_utils.cosine_similarity', sys))
+  reload(sys.modules.get('asepl_utils.effect_per_layer', sys))
   reload(sys.modules.get('asepl_utils', sys))
 
   reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
@@ -27,11 +29,12 @@ if False:
   reload(sys.modules.get('utils.load_hidden_states_cache', sys))
   reload(sys.modules.get('utils.compute_candidate_directions', sys))
   reload(sys.modules.get('utils.prepare_queries', sys))
-  reload(sys.modules.get('utils.get_n_layers', sys))
   reload(sys.modules.get('utils', sys))
 
 from asepl_utils import parse_args
 from asepl_utils import set_save_grad_hooks
+from asepl_utils import compute_create_save_cosine_similarities_plot
+from asepl_utils import create_effect_per_layer_plot
 
 from utils import use_deterministic_algorithms
 from utils import load_model_and_tokenizer
@@ -39,16 +42,16 @@ from utils import load_json_dataset
 from utils import load_hidden_states_cache
 from utils import compute_candidate_directions
 from utils import prepare_queries
-from utils import ProjectionHookConfig
-from utils import set_activations_hooks
 
 import random
 from tqdm import tqdm
 import torch
-from jaxtyping import Float
-from torch.nn.functional import log_softmax, kl_div
 from torch import Tensor
+from torch.nn.functional import log_softmax, kl_div
+from jaxtyping import Float
 import gc
+
+import numpy as np
 
 # %%
 
@@ -69,12 +72,12 @@ if False:
     '--data_sample_size', '24',
     '--data_batch_size', '1',
 
-    '--huginn_num_steps', '32',
+    '--huginn_num_steps', '16',
 
     '--with_post_hook',
     '--projection_scale', '0.1',
 
-    '--output_file_path', f'{root_path}/experiments/analyze_steering_effect_per_layer/huginn-0125.json',
+    '--output_path', f'{root_path}/experiments/analyze_steering_effect_per_layer',
   ]
 
 args = parse_args()
@@ -187,27 +190,10 @@ queries_batched = [
 
 # %%
 
-layer_indices = list(candidate_directions.keys())
-
-print("Setting up activations hooks for the model.")
-projection_hook_config = ProjectionHookConfig(
-  layer_indices=layer_indices,
-  candidate_directions=candidate_directions,
-  pre_hook=args["with_pre_hook"],
-  post_hook=args["with_post_hook"],
-  scale=args["projection_scale"],
-)
-activations_hooks = set_activations_hooks(
-  model=model,
-  candidate_directions=candidate_directions,
-  config=projection_hook_config,
-)
-
-# %%
-
-print("Setting up save_grad hooks for the model.")
+print("Setting up save_grad hooks for the model with gradient_mode last_token.")
 save_grad_hooks, gradients = set_save_grad_hooks(
   model=model,
+  gradient_mode="last_token",
 )
 
 # %%
@@ -223,9 +209,12 @@ def compute_kl_divergence(logits: Float[Tensor, "batch seq_len n_embd"]):
 
 match model.config.model_type:
   case name if name.startswith("huginn_"):
-    effects = [0] * len(layer_indices)
+    effects: dict[int, list[float]] = {}
 
     for queries_batch in tqdm(queries_batched):
+      model.zero_grad()
+      gradients.clear()
+      
       input_ids = tokenizer(
         queries_batch,
         return_tensors='pt',
@@ -246,54 +235,67 @@ match model.config.model_type:
         }
       )
 
-      loss = compute_kl_divergence(outputs["logits"])
+      loss = compute_kl_divergence(outputs["logits"][:, -1:])
       loss.backward()
 
       for layer_index in list(
         gradients.keys() & candidate_directions.keys()
       ):
         effect = (
-          gradients[layer_index]
+          gradients[layer_index][:, -1:]
           @ candidate_directions[layer_index]
         ).mean().abs()
-        effects[layer_index] += effect.item()
+        if effects.get(layer_index) is None:
+          effects[layer_index] = []
+        effects[layer_index].append(effect.item())
 
       del input_ids
       del outputs
       del loss
-      model.zero_grad()
-      gradients.clear()
       gc.collect()
       torch.cuda.empty_cache()
   case _:
     raise ValueError(f"Model type {model.config.model_type} is not supported.")
 
+# %%
+
 print("Effects per layer:")
 print(effects)
+
+print("Top 8 layers with the highest effects:")
+top_effects = sorted(
+  effects.items(),
+  key=lambda item: np.mean(item[1]),
+  reverse=True,
+)[:8]
+for layer_index, effect_values in top_effects:
+  print(f"Layer {layer_index}: {np.mean(effect_values):.4f} ± {np.std(effect_values):.4f} (n={len(effect_values)})")
 
 # %%
 
 print("Removing hooks from the model.")
-for activations_hook in activations_hooks:
-  activations_hook.remove()
 for save_grad_hook in save_grad_hooks:
   save_grad_hook.remove()
 
 # %%
 
-if args['output_file_path'] is None:
+if args['output_path'] is None:
   print("No output path specified. Results will not be saved.")
   sys.exit(0)
 
 try:
-  print(f"Loading existing results from: {args['output_file_path']}")
+  output_file_path = os.path.join(
+    args['output_path'],
+    f"{args['model_name']}.json"
+  )
+  print(f"Loading existing results from: {output_file_path}")
   output = torch.load(
-    args["output_file_path"],
+    output_file_path,
     map_location='cpu',
     weights_only=False,
   )
 except FileNotFoundError:
-  print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
+  print(f"File not found: {output_file_path}. Creating a new results dictionary.")
   output = {}
 
 # %%
@@ -324,10 +326,47 @@ output[output_key] = effects
 
 # %%
 
-output_path = os.path.dirname(args['output_file_path'])
-os.makedirs(output_path, exist_ok=True)
+os.makedirs(args['output_path'], exist_ok=True)
 
-print(f"Saving evaluation results to: {args['output_file_path']}")
-torch.save(output, args['output_file_path'])
+print(f"Saving evaluation results to: {output_file_path}")
+torch.save(output, output_file_path)
+
+# %%
+
+fig = create_effect_per_layer_plot(
+  effects=effects,
+  model_name=args['model_name'],
+)
+
+# %%
+
+output_plot_path = os.path.join(
+  args['output_path'],
+  f"{args['model_name']}_effect_per_layer.pdf"
+)
+print(f"Saving the effect per layer plot to: {output_plot_path}")
+fig.savefig(
+  fname=output_plot_path,
+  dpi=300,
+  bbox_inches='tight',
+  facecolor='white',
+  edgecolor='none',
+)
+
+# %%
+
+match model.config.model_type:
+  case name if name.startswith("huginn_"):
+    compute_create_save_cosine_similarities_plot(
+      candidate_directions=candidate_directions,
+      x2=model.transformer.wte.weight.data,
+      output_file_path=os.path.join(
+        args['output_path'],
+        f"{args['model_name']}_cosine_similarities_embed.pdf"
+      ),
+      x2_name="embedding layer weight",
+    )
+  case _:
+    raise ValueError(f"Model type {model.config.model_type} is not supported for cosine similarity analysis.")
 
 # %%
