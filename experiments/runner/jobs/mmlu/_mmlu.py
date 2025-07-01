@@ -11,6 +11,13 @@ def get_mmlu(
     jobs.append(get_mmlu_evaluate_lm_eval(workspace_path=workspace_path))
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention":
     jobs.append(get_mmlu_evaluate_lm_eval_with_intervention(workspace_path=workspace_path))
+  if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_129":
+    jobs.append(
+      get_mmlu_evaluate_lm_eval_with_intervention(
+        workspace_path=workspace_path,
+        layer_indices=[129],
+      )
+    )
   
   if len(jobs) == 0:
     raise ValueError(f"Job '{job}' not found in MMLU jobs.")

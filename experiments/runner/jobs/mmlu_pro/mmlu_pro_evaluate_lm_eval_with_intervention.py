@@ -14,7 +14,7 @@ python experiments/evaluate_lm_eval/main.py \
 \
 --with_intervention \
 --hidden_states_cache_file_path "$WORKSPACE_PATH/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt" \
---layer_indices 66 \
+--layer_indices {layer_indices} \
 --with_post_hook \
 \
 --tasks mmlu_pro \
@@ -25,5 +25,11 @@ python experiments/evaluate_lm_eval/main.py \
 --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/huginn-0125.json"
 """
 
-def get_mmlu_pro_evaluate_lm_eval_with_intervention(workspace_path: str) -> str:
-  return shell.format(workspace_path=workspace_path)
+def get_mmlu_pro_evaluate_lm_eval_with_intervention(
+  workspace_path: str,
+  layer_indices: list[int],
+) -> str:
+  return shell.format(
+    workspace_path=workspace_path,
+    layer_indices=" ".join(map(str, layer_indices)),
+  )
