@@ -10,7 +10,12 @@ def get_mmlu(
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval":
     jobs.append(get_mmlu_evaluate_lm_eval(workspace_path=workspace_path))
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention":
-    jobs.append(get_mmlu_evaluate_lm_eval_with_intervention(workspace_path=workspace_path))
+    jobs.append(
+      get_mmlu_evaluate_lm_eval_with_intervention(
+        workspace_path=workspace_path,
+        layer_indices=[66],
+      )
+    )
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_129":
     jobs.append(
       get_mmlu_evaluate_lm_eval_with_intervention(

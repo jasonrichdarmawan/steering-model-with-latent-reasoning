@@ -7,6 +7,8 @@ python experiments/evaluate_lm_eval/main.py \
 \
 --models_path "$WORKSPACE_PATH/transformers" \
 --model_name huginn-0125 \
+--device cuda \
+--with_parallelize \
 \
 --huginn_num_steps 32 \
 \

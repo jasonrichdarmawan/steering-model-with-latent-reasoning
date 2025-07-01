@@ -76,11 +76,11 @@ python experiments/runner/main.py \
 # How to evaluate with lm_eval
 
 ```bash
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/media/tao/disk4T/jason"
 
 python experiments/runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_evaluate_lm_eval_with_intervention \
+--jobs mmlu_evaluate_lm_eval_with_intervention_129 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -97,10 +97,12 @@ $ python -m unittest discover tests
 
 # Hardware used
 
-1x NVIDIA 3090 was used for the following jobs:
-- `mmlu_pro_save_hidden_states`
+2x NVIDIA 3060 was used for the following jobs:
 - `mmlu_evaluate_lm_eval`
 - `mmlu_evaluate_lm_eval_with_intervention`
+
+1x NVIDIA 3090 was used for the following jobs:
+- `mmlu_pro_save_hidden_states`
 
 2x NVIDIA 3090 was used for the following jobs:
 - `mmlu_pro_evaluate_accuracy_reasoning_memorizing`
