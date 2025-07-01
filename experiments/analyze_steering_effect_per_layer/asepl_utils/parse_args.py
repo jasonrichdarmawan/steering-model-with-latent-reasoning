@@ -14,10 +14,6 @@ class Args(TypedDict):
 
   huginn_num_steps: int | None
 
-  with_pre_hook: bool
-  with_post_hook: bool
-  projection_scale: float
-
   output_path: str | None
 
 def parse_args() -> Args:
@@ -74,23 +70,6 @@ def parse_args() -> Args:
     type=int,
     default=None,
     help='Number of steps for Huginn model generation. If None, the default value will be used.'
-  )
-
-  parser.add_argument(
-    '--with_pre_hook',
-    action='store_true',
-    help='Whether to use a pre-hook for the intervention.'
-  )
-  parser.add_argument(
-    '--with_post_hook',
-    action='store_true',
-    help='Whether to use a post-hook for the intervention.'
-  )
-  parser.add_argument(
-    '--projection_scale',
-    type=float,
-    default=0.1,
-    help='Scale factor for the projection in the intervention.'
   )
 
   parser.add_argument(

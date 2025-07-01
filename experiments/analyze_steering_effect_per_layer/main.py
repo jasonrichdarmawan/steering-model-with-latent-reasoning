@@ -59,7 +59,7 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/home/npu-tao/jason"
+  root_path = "/root/autodl-fs"
   sys.argv = [
     'main.py',
 
@@ -69,13 +69,10 @@ if False:
     '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
     '--data_path', f'{root_path}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples.json',
-    '--data_sample_size', '24',
+    # '--data_sample_size', '24',
     '--data_batch_size', '1',
 
-    '--huginn_num_steps', '16',
-
-    '--with_post_hook',
-    '--projection_scale', '0.1',
+    '--huginn_num_steps', '32',
 
     '--output_path', f'{root_path}/experiments/analyze_steering_effect_per_layer',
   ]
@@ -99,11 +96,11 @@ device_map = {
   "transformer.prelude": 0,
   "transformer.adapter": 0,
   "transformer.core_block.0": 0,
-  "transformer.core_block.1": 0,
-  "transformer.core_block.2": 1,
-  "transformer.core_block.3": 1,
-  "transformer.coda": 1,
-  "transformer.ln_f": 1,
+  "transformer.core_block.1": 1,
+  "transformer.core_block.2": 2,
+  "transformer.core_block.3": 3,
+  "transformer.coda": 3,
+  "transformer.ln_f": 3,
   "lm_head": 0,
 }
 
@@ -221,7 +218,7 @@ match model.config.model_type:
         add_special_tokens=False,
         padding='longest',
         return_token_type_ids=False,
-      ).input_ids
+      ).input_ids.to(device=model.device)
 
       outputs = model(
         input_ids=input_ids,

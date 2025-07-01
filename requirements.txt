@@ -1,0 +1,15 @@
+# common dependencies for all jobs
+torch~=2.7
+transformers~=4.51
+jaxtyping~=0.3
+tqdm~=4.67
+
+# common from the models folder
+lightning~=2.5
+
+# job: analyze_steering_effect_per_layer
+numpy~=1.26
+matplotlib~=3.10
+
+# job: evaluate_lm_eval
+lm_eval~=0.4
