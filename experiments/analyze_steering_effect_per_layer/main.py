@@ -59,7 +59,7 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/root/autodl-fs"
+  root_path = "/media/npu-tao/disk4T/jason"
   sys.argv = [
     'main.py',
 
@@ -74,7 +74,7 @@ if False:
 
     '--huginn_num_steps', '32',
 
-    '--output_path', f'{root_path}/experiments/analyze_steering_effect_per_layer',
+    '--output_path', f'{root_path}/experiments/analyze_steering_effect_per_layer/huginn-0125',
   ]
 
 args = parse_args()
@@ -259,12 +259,14 @@ match model.config.model_type:
 print("Effects per layer:")
 print(effects)
 
-print("Top 8 layers with the highest effects:")
+# %%
+
+print("Layers by the highest effects:")
 top_effects = sorted(
   effects.items(),
   key=lambda item: np.mean(item[1]),
   reverse=True,
-)[:8]
+)
 for layer_index, effect_values in top_effects:
   print(f"Layer {layer_index}: {np.mean(effect_values):.4f} ± {np.std(effect_values):.4f} (n={len(effect_values)})")
 

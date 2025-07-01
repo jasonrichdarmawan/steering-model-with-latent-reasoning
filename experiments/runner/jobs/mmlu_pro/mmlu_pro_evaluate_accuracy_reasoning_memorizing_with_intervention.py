@@ -16,11 +16,19 @@ python experiments/evaluate_accuracy_reasoning_memorizing/main.py \
 --batch_size 1 \
 \
 --with_intervention \
---layer_indices 66 \
+--layer_indices {layer_indices} \
 --with_post_hook \
 \
 --output_file_path "$WORKSPACE_PATH/experiments/reasoning_memorizing_accuracy/huginn-0125.json"
 """
 
-def get_mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention(workspace_path: str) -> str:
-    return shell.format(workspace_path=workspace_path)
+def get_mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention(
+  workspace_path: str,
+  layer_indices: list[int],
+) -> str:
+  layer_indices_str = " ".join(map(str, layer_indices))
+
+  return shell.format(
+    workspace_path=workspace_path,
+    layer_indices=layer_indices_str,
+  )

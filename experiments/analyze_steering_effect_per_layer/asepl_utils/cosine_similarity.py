@@ -6,8 +6,8 @@ from matplotlib import pyplot as plt
 def compute_create_save_cosine_similarities_plot(
   candidate_directions: dict[int, Float[Tensor, "n_embd"]],
   x2: Float[Tensor, "n_embd"],
-  output_file_path: str,
   x2_name: str,
+  output_file_path: str | None = None,
 ):
   """
   High cosine similarity between candidate directions 
@@ -24,12 +24,12 @@ def compute_create_save_cosine_similarities_plot(
     x2=x2,
   )
 
-  print(f"Top 8 layers with the highest cosine similarity between candidate directions and {x2_name}:")
+  print(f"Layers by the highest cosine similarity between candidate directions and {x2_name}:")
   top_cosine_similarities = sorted(
     cosine_similarities.items(),
     key=lambda item: item[1],
     reverse=True,
-  )[:8]
+  )
   for layer_index, cosine_similarity in top_cosine_similarities:
     print(f"Layer {layer_index}: {cosine_similarity:.4f}")
 
@@ -38,6 +38,10 @@ def compute_create_save_cosine_similarities_plot(
     x2_name=x2_name,
   )
 
+  if output_file_path is None:
+    print("No output file path specified. Plot will not be saved.")
+    return
+  
   print(f"Saving the cosine similarity between candidate directions and {x2_name} plot to: {output_file_path}")
   cosine_similarities_fig.savefig(
     fname=output_file_path,

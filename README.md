@@ -58,17 +58,18 @@ python experiments/runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-Disclaimer:
-1. Due to GPU memory constraints with the currently available hardware (2x NVIDIA 3090), the job `mmlu_pro_analyze_steering_effect_per_layer` sets `huginn_num_steps` to 16 instead of the default 32. As a result, layer indices 66 to 129 are not included in the analysis.
+~~Disclaimer:~~
+~~1. Due to GPU memory constraints with the currently available hardware (2x NVIDIA 3090), the job `mmlu_pro_analyze_steering_effect_per_layer` sets `huginn_num_steps` to 16 instead of the default 32. As a result, layer indices 66 to 129 are not included in the analysis.~~
+I rented 4x 3090 for 2 hours. This is no longer an issue.
 
 # How to evaluate accuracy reasoning and memorization
 
 ```bash
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python experiments/runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention \
+--jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 

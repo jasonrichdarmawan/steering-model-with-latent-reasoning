@@ -19,7 +19,19 @@ def get_mmlu_pro(
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing":
     jobs.append(get_mmlu_pro_evaluate_accuracy_reasoning_memorizing(workspace_path=workspace_path))
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention":
-    jobs.append(get_mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention(workspace_path=workspace_path))
+    jobs.append(
+      get_mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention(
+        workspace_path=workspace_path,
+        layer_indices=[66],
+      )
+    )
+  if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129":
+    jobs.append(
+      get_mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention(
+        workspace_path=workspace_path,
+        layer_indices=[129],
+      )
+    )
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_lm_eval":
     jobs.append(get_mmlu_pro_evaluate_lm_eval(workspace_path=workspace_path))
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_lm_eval_with_intervention":
