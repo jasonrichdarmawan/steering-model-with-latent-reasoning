@@ -97,6 +97,7 @@ match args["model_name"]:
         args["models_path"], 
         args["model_name"]
       ),
+      backend="causal",
       device=args["device"],
       batch_size=args["batch_size"],
       trust_remote_code=False,

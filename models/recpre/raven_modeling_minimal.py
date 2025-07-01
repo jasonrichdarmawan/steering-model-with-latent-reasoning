@@ -645,7 +645,14 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         x = self.transformer.ln_f(latents)
         # Coda layers
         for block_idx, block in enumerate(self.transformer.coda, start=1):
-            x, attn_map = block(x, freqs_cis, -block_idx, attention_mask, past_key_values)
+            x, attn_map, _ = block(
+                x=x,
+                freqs_cis=freqs_cis,
+                step_idx=-block_idx,
+                depth_idx=block.layer_id,
+                mask=attention_mask,
+                past_key_values=past_key_values,
+            )
         attn_maps[block_idx] = attn_map
         x = self.transformer.ln_f(x)
 
@@ -689,8 +696,14 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         # Non-recurrent prelude
         attn_maps = {}
         for block_idx, block in enumerate(self.transformer.prelude):
-            input_embeds, attn_maps = block(
-                input_embeds, freqs_cis, block_idx, attention_mask, past_key_values, return_attn
+            input_embeds, attn_maps, _ = block(
+                x=input_embeds,
+                freqs_cis=freqs_cis,
+                step_idx=block_idx,
+                depth_idx=block.layer_id,
+                mask=attention_mask,
+                past_key_values=past_key_values,
+                return_attn=return_attn,
             )
         return input_embeds, block_idx, attn_maps
 
