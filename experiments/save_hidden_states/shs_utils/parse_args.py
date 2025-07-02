@@ -25,7 +25,6 @@ def parse_args() -> Args:
     '--model_name',
     type=str,
     help="Folder name of the specific model to load from the root directory",
-    default="huginn-0125",
   )
   
   parser.add_argument(

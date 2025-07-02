@@ -13,7 +13,19 @@ def get_mmlu_pro(
   jobs = []
   
   if job == "mmlu_pro" or job == "mmlu_pro_save_hidden_states":
-    jobs.append(get_mmlu_pro_save_hidden_states(workspace_path=workspace_path))
+    jobs.append(
+      get_mmlu_pro_save_hidden_states(
+        workspace_path=workspace_path,
+        model_name="huginn-0125",
+      )
+    )
+  if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_save_hidden_states":
+    jobs.append(
+      get_mmlu_pro_save_hidden_states(
+        workspace_path=workspace_path,
+        model_name="Meta-Llama-3-8B",
+      )
+    )
 
   if job == "mmlu_pro" or job == "mmlu_pro_analyze_steering_effect_per_layer":
     jobs.append(get_mmlu_pro_analyze_steering_effect_per_layer(workspace_path=workspace_path))

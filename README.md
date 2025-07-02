@@ -36,18 +36,27 @@
 
    Note: We use `datasets.zip` for fair performance comparison purpose as [the method](https://arxiv.org/abs/2503.23084) we are comparing to use this datasets.
 
-# How to save hidden states
+# How to reproduce the experiment?
+
+See the subsections below for the examples.
+
+You can see the list of jobs in the [experiments/runner/jobs](experiments/runner/jobs) folder.
+
+A job consists of multiple sub-jobs. If you want to run specific
+sub-job, then see the `experiments/runner/jobs/[job_name]/_[job_name].py` file
+
+## How to save hidden states?
 
 ```shell
-WORKSPACE_PATH="/home/npu-tao/jason"
+WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python experiments/runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_save_hidden_states \
+--jobs mmlu_pro_meta-llama-3-8b_save_hidden_states \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-# How to analyze steering effect per layer
+## How to analyze steering effect per layer?
 
 ```bash
 WORKSPACE_PATH="/root/autodl-fs"
@@ -62,7 +71,7 @@ python experiments/runner/main.py \
 ~~1. Due to GPU memory constraints with the currently available hardware (2x NVIDIA 3090), the job `mmlu_pro_analyze_steering_effect_per_layer` sets `huginn_num_steps` to 16 instead of the default 32. As a result, layer indices 66 to 129 are not included in the analysis.~~
 I rented 4x 3090 for 2 hours. This is no longer an issue.
 
-# How to evaluate accuracy reasoning and memorization
+## How to evaluate accuracy reasoning and memorization?
 
 ```bash
 WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
@@ -73,7 +82,7 @@ python experiments/runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-# How to evaluate with lm_eval
+## How to evaluate with lm_eval?
 
 ```bash
 WORKSPACE_PATH="/media/tao/disk4T/jason"
@@ -84,7 +93,7 @@ python experiments/runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-# How to test
+## How to test?
 
 ```shell
 $ python -m unittest discover tests

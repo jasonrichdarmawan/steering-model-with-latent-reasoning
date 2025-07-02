@@ -11,6 +11,7 @@ def prepare_queries(
   system_prompt: str | None = None,
   fewshot_prompts: dict[str, list[str]] | None = None,
   with_cot: bool = True,
+  with_options: bool = True,
 ):
   """
   model_name: The identifier for the model architecture, typically obtained from PreTrainedModel.config.model_type. 
@@ -28,8 +29,10 @@ def prepare_queries(
           selected_fewshot_prompts = fewshot_prompts[category]
         
         question = entry['question']
-        options = format_options(entry['options'])
-        question_content = f"{question}\n{options}"
+        question_content = question
+        if with_options:
+          options = format_options(entry['options'])
+          question_content = f"{question}\n{options}"
 
         query = prepare_query(
           model_name=model_name,
@@ -72,6 +75,8 @@ def prepare_query(
     The fully formatted query string ready for model inference.
   """
   match model_name:
+    # TODO: assess whether we need
+    # to handle each model type separately
     case name if name.startswith("huginn_"):
       query = _prepare_query_huginn(
         question_content=question_content,
@@ -83,8 +88,51 @@ def prepare_query(
       )
       
       return query
+    case "llama":
+      query = _prepare_query_llama(
+        question_content=question_content,
+        tokenizer=tokenizer,
+        apply_chat_template=apply_chat_template,
+        system_prompt=system_prompt,
+        fewshot_prompts=fewshot_prompts,
+        with_cot=with_cot,
+      )
+
+      return query
     case _:
       raise ValueError(f"Unsupported model name: {model_name}")
+
+def _prepare_query_llama(
+  question_content: str,
+  tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_chat_template: bool = False,
+  system_prompt: str | None = None,
+  fewshot_prompts: list[str] | None = None,
+  with_cot: bool = True
+):
+  """
+  TODO: support other arguments
+  Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/4f95e7e82935b1bce05e5cda4fc0ca8eff648d98/reasoning_representation/LiReFs_storing_hs.ipynb
+  """
+  user_content = ""
+
+  if fewshot_prompts:
+    raise NotImplementedError("Few-shot prompts are not supported for Llama models. ")
+  
+  if with_cot:
+    raise NotImplementedError("Chain-of-thought reasoning is not supported for Llama models. ")
+  
+  user_content = "Q: " + question_content + "\nA: "
+
+  if apply_chat_template is False:
+    query = user_content
+    return query
+
+  if apply_chat_template:
+    raise NotImplementedError("Chat template formatting is not implemented for Llama models. ")
+  
+  if system_prompt:
+    raise NotImplementedError("System prompts are not supported for Llama models. ")
 
 def _prepare_query_huginn(
   question_content: str,

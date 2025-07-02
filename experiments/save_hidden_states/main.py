@@ -49,11 +49,11 @@ from tqdm import tqdm
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/home/npu-tao/jason"
+  root_path = "/media/npu-tao/disk4T/jason"
   sys.argv = [
     'main.py',
     '--models_path', f'{root_path}/transformers',
-    '--model_name', 'huginn-0125',
+    '--model_name', 'Meta-Llama-3-8B',
 
     '--data_path', f'{root_path}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples.json',
@@ -61,7 +61,7 @@ if False:
     # '--data_sample_size', '600',
     '--data_batch_size', '8',
 
-    '--output_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
+    '--output_file_path', f'{root_path}/experiments/hidden_states_cache/meta-llama-3-8b_mmlu-pro-3000samples.pt',
   ]
 
 args = parse_args()
@@ -109,6 +109,7 @@ queries = prepare_queries(
   system_prompt=None,
   fewshot_prompts=None,
   with_cot=False,
+  with_options=False,
 )
 
 queries_batched = [
