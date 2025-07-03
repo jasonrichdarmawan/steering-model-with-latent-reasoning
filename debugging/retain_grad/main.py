@@ -11,16 +11,12 @@ if project_root not in sys.path:
 
 # %%
 
-if True:
-  print("Reloading modules to ensure the latest code is used.")
-  import sys
-  from importlib import reload
-  reload(sys.modules.get("rg_models.recpre.raven_config", sys))
-  reload(sys.modules.get("rg_models.recpre.sandwich_block", sys))
-  reload(sys.modules.get("rg_models.recpre.raven_model", sys))
-  reload(sys.modules.get("rg_models.recpre.raven_for_causal_lm", sys))
-  reload(sys.modules.get("rg_models.recpre", sys))
-  reload(sys.modules.get("rg_models", sys))
+if False:
+  from utils import reload_modules
+  
+  reload_modules(
+    project_root=project_root,
+  )
 
 from rg_models import RavenConfig
 

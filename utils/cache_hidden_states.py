@@ -1,3 +1,5 @@
+from utils import get_n_layers
+
 from transformers import PreTrainedTokenizerBase
 import torch
 from jaxtyping import Float
@@ -7,7 +9,7 @@ def cache_hidden_states(
   model,
   tokenizer: PreTrainedTokenizerBase,
   queries_batch: list[list[str]],
-  hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]] | None = None,
+  hidden_states_cache: dict[int, Float[Tensor, "batch n_embd"]] | None = None,
 ):
   match model.config.model_type:
     case name if name.startswith("huginn_"):
@@ -29,15 +31,6 @@ def cache_hidden_states(
 
   return hidden_states_cache
 
-def get_n_layers(model) -> int:
-  match model.config.model_type:
-    case name if name.startswith("huginn_"):
-      return model.config.effective_expected_depth + 1
-    case "llama":
-      return model.config.num_hidden_layers
-    case _:
-      raise ValueError(f"Model type {model.config.model_type} is not supported for n_layers retrieval.")
-
 def get_n_embd(model) -> int:
   match model.config.model_type:
     case name if name.startswith("huginn_"):
@@ -51,7 +44,7 @@ def _cache_hidden_states_llama(
   model,
   tokenizer: PreTrainedTokenizerBase,
   queries_batch: list[list[str]],
-  hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]] | None = None,
+  hidden_states_cache: dict[int, Float[Tensor, "batch n_embd"]] | None = None,
 ):
   inputs = tokenizer(
     queries_batch,
@@ -99,7 +92,7 @@ def _cache_hidden_states_huginn(
   model,
   tokenizer: PreTrainedTokenizerBase,
   queries_batch: list[list[str]],
-  hidden_states_cache: dict[int, Float[Tensor, "seq_len n_embd"]] | None = None,
+  hidden_states_cache: dict[int, Float[Tensor, "batch n_embd"]] | None = None,
 ):
   inputs = tokenizer(
     queries_batch,

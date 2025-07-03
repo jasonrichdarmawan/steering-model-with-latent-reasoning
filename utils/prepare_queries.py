@@ -23,11 +23,7 @@ def prepare_queries(
   match data_name:
     case "mmlu-pro" | "mmlu-pro-3000samples.json":
       for entry in data:
-        selected_fewshot_prompts = fewshot_prompts
-        if selected_fewshot_prompts is not None:
-          category = entry['category']
-          selected_fewshot_prompts = fewshot_prompts[category]
-        
+        # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/4f95e7e82935b1bce05e5cda4fc0ca8eff648d98/reasoning_representation/LiReFs_storing_hs.ipynb
         question = entry['question']
         question_content = question
         if with_options:
@@ -40,15 +36,15 @@ def prepare_queries(
           tokenizer=tokenizer,
           apply_chat_template=apply_chat_template,
           system_prompt=system_prompt,
-          fewshot_prompts=selected_fewshot_prompts,
-          with_cot=with_cot
+          fewshot_prompts=fewshot_prompts[entry['category']] if fewshot_prompts else None,
+          with_cot=with_cot,
         )
 
         queries.append(query)
+      
+      return queries
     case _:
       raise ValueError(f"Unsupported data name: {data_name}")
-
-  return queries
 
 def prepare_query(
   model_name: str,
@@ -111,18 +107,18 @@ def _prepare_query_llama(
   with_cot: bool = True
 ):
   """
-  TODO: support other arguments
   Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/4f95e7e82935b1bce05e5cda4fc0ca8eff648d98/reasoning_representation/LiReFs_storing_hs.ipynb
   """
   user_content = ""
 
   if fewshot_prompts:
-    raise NotImplementedError("Few-shot prompts are not supported for Llama models. ")
+    for fewshot_prompt in fewshot_prompts:
+      user_content += f"{fewshot_prompt}\n\n"
   
-  if with_cot:
-    raise NotImplementedError("Chain-of-thought reasoning is not supported for Llama models. ")
-  
-  user_content = "Q: " + question_content + "\nA: "
+  if fewshot_prompts and with_cot:
+    user_content += f"Q: {question_content}\nA: Let's think step by step. "
+  else:
+    user_content += f"Q: {question_content}\nA: "
 
   if apply_chat_template is False:
     query = user_content
@@ -151,16 +147,15 @@ def _prepare_query_huginn(
 
   if fewshot_prompts:
     for fewshot_prompt in fewshot_prompts:
-      # Each few-shot prompt should already end with "\n\n"
-      user_content += fewshot_prompt
+      user_content += f"{fewshot_prompt}\n\n"
   
   # If few-shot prompts are provided and chain-of-thought (CoT) reasoning is enabled (with_cot=True),
   # append the question followed by "A: Let's think step by step." to encourage step-by-step reasoning.
   # Otherwise, append the question followed by "A: " for a direct answer.
   if fewshot_prompts and with_cot:
-    user_content += f"Q: {question_content}\nA: Let's think step by step. "
+    user_content += f"Q: {question_content}\n\nA: Let's think step by step. "
   else:
-    user_content += f"Q: {question_content}\nA: "
+    user_content += f"Q: {question_content}\n\nA: "
 
   if apply_chat_template is False:
     query = user_content

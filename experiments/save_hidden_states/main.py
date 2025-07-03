@@ -12,28 +12,15 @@ if project_root not in sys.path:
 # %%
 
 if False:
-  import sys
-  from importlib import reload
-
-  print("Reloading modules to ensure the latest code is used.")
+  from utils import reload_modules
   
-  reload(sys.modules.get('shs_utils.parse_args', sys))
-  reload(sys.modules.get('shs_utils', sys))
-
-  reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
-  reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
-  reload(sys.modules.get('utils.load_and_sample_test_dataset', sys))
-  reload(sys.modules.get('utils.load_json_dataset', sys))
-  reload(sys.modules.get('utils.prepare_queries', sys))
-  reload(sys.modules.get('utils.get_n_layers', sys))
-  reload(sys.modules.get('utils.get_n_embd', sys))
-  reload(sys.modules.get('utils.cache_hidden_states', sys))
-  reload(sys.modules.get('utils.load_hidden_states_cache', sys))
-  reload(sys.modules.get('utils', sys))
+  reload_modules(
+    project_root=project_root,
+  )
 
 from shs_utils import parse_args
 
-from utils import use_deterministic_algorithms
+from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import load_and_sample_test_dataset
@@ -73,7 +60,7 @@ for key, value in args.items():
 # %%
 
 print("Setting deterministic algorithms for reproducibility.")
-use_deterministic_algorithms()
+enable_reproducibility()
 
 # %%
 

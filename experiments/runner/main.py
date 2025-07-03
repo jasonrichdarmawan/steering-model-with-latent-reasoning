@@ -11,6 +11,13 @@ if project_root not in sys.path:
 
 # %%
 
+if False:
+  from utils import reload_modules
+  
+  reload_modules(
+    project_root=project_root,
+  )
+
 from runner_utils import parse_args
 from runner_utils import set_up_jobs
 
@@ -20,14 +27,6 @@ from typing import Optional
 import os
 import subprocess
 import sys
-
-if False:
-  from importlib import reload
-  import sys
-  print("Reloading modules to ensure the latest code is used.")
-  reload(sys.modules.get('runner_utils.parse_args', sys))
-  reload(sys.modules.get('runner_utils.set_up_jobs', sys))
-  reload(sys.modules.get('runner_utils', sys))
 
 # %%
 
@@ -84,73 +83,87 @@ class ExperimentResult(TypedDict):
 
 experiment_results: list[ExperimentResult] = []
 
-now = datetime.now()
-timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-file_path = f"{args['output_path']}/{timestamp}.txt"
+if args['output_path']:
+  now = datetime.now()
+  timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+  file_path = f"{args['output_path']}/{timestamp}.txt"
 
-os.makedirs(args['output_path'], exist_ok=True)  # Ensure the output directory exists
+  os.makedirs(args['output_path'], exist_ok=True)  # Ensure the output directory exists
 
-with open(file_path, 'w', encoding='utf-8') as f:
+  f = open(file_path, 'w', encoding='utf-8')
   original_stdout = sys.stdout
   original_stderr = sys.stderr
   tee = Tee(original_stdout, f)
   sys.stdout = tee # Redirect stdout to both console and file
   sys.stderr = tee
 
-  for i, job in enumerate(EXPERIMENT_JOBS):
-    print(f"\n\nExperiment {i+1}")
-    print("#" * 60)
-    failed = False
-    failed_at = None
-    for j, cmd in enumerate(job):
-      print(f"\nRunning command {i+1}/{len(EXPERIMENT_JOBS)}.")
-      print("#" * 60)
-      print(f"Command:\n{cmd}")
-      process = subprocess.Popen(
-        cmd,
-        cwd=project_root,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding='utf-8',
-        bufsize=1
-      )
+  print(f"Output will be saved to: {file_path}")
+else:
+  print("No output file path specified, results will only be printed to the console.")
 
-      for line in process.stdout:
-        print(line, end='')
+# %%
 
-      process.wait()
-      returncode = process.returncode
-      if returncode != 0:
-        print(f"{'#' * 30} Command {j+1}/{len(job)} failed with return code {returncode}. Skipping to the next experiment. {'#' * 30}")
-        failed = True
-        failed_at = j + 1
-        break
-    if not failed:
-      print(f"{'#' * 30} Experiment {i+1} completed successfully. {'#' * 30}")
-      experiment_results.append({
-        "experiment_number": i + 1,
-        "status": 1,
-        "failed_at": None
-      })
-    else:
-      print(f"{'#' * 30} Experiment {i+1} failed at command {failed_at}. {'#' * 30}")
-      experiment_results.append({
-        "experiment_number": i + 1,
-        "status": 0,
-        "failed_at": failed_at
-      })
-
-  print("\n\nExperiment Results Summary")
+for i, job in enumerate(EXPERIMENT_JOBS):
+  print(f"\n\nExperiment {i+1}")
   print("#" * 60)
-  for result in experiment_results:
-    if result["status"] == 1:
-      print(f"Experiment {result['experiment_number']}: Success")
-    else:
-      print(f"Experiment {result['experiment_number']}: Failed at command {result['failed_at']}")
+  failed = False
+  failed_at = None
+  for j, cmd in enumerate(job):
+    print(f"\nRunning command {i+1}/{len(EXPERIMENT_JOBS)}.")
+    print("#" * 60)
+    print(f"Command:\n{cmd}")
+    process = subprocess.Popen(
+      cmd,
+      cwd=project_root,
+      shell=True,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      text=True,
+      encoding='utf-8',
+      bufsize=1
+    )
 
+    for line in process.stdout:
+      print(line, end='')
+
+    process.wait()
+    returncode = process.returncode
+    if returncode != 0:
+      print(f"{'#' * 30} Command {j+1}/{len(job)} failed with return code {returncode}. Skipping to the next experiment. {'#' * 30}")
+      failed = True
+      failed_at = j + 1
+      break
+  if not failed:
+    print(f"{'#' * 30} Experiment {i+1} completed successfully. {'#' * 30}")
+    experiment_results.append({
+      "experiment_number": i + 1,
+      "status": 1,
+      "failed_at": None
+    })
+  else:
+    print(f"{'#' * 30} Experiment {i+1} failed at command {failed_at}. {'#' * 30}")
+    experiment_results.append({
+      "experiment_number": i + 1,
+      "status": 0,
+      "failed_at": failed_at
+    })
+
+# %%
+
+print("\n\nExperiment Results Summary")
+print("#" * 60)
+for result in experiment_results:
+  if result["status"] == 1:
+    print(f"Experiment {result['experiment_number']}: Success")
+  else:
+    print(f"Experiment {result['experiment_number']}: Failed at command {result['failed_at']}")
+
+# %%
+
+if args['output_path']:
+  print(f"\n\nAll results have been saved to: {file_path}")
   sys.stdout = original_stdout
   sys.stderr = original_stderr
+  f.close()
 
 # %%

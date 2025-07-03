@@ -3,7 +3,7 @@ import argparse
 
 class Args(TypedDict):
   workspace_path: str
-  output_path: str
+  output_path: str | None
 
 def parse_args() -> Args:
   parser = argparse.ArgumentParser(
@@ -27,6 +27,7 @@ def parse_args() -> Args:
     '--output_path',
     type=str,
     help="Path to save the output log file.",
+    default=None,
   )
   
   args = parser.parse_args()

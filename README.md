@@ -52,7 +52,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python experiments/runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_meta-llama-3-8b_save_hidden_states \
+--jobs mmlu_pro_save_hidden_states \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -78,7 +78,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python experiments/runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129 \
+--jobs mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 

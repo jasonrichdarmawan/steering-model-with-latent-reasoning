@@ -12,31 +12,18 @@ if project_root not in sys.path:
 # %%
 
 if False:
-  import sys
-  from importlib import reload
-
-  print("Reloading modules to ensure the latest code is used.")
+  from utils import reload_modules
   
-  reload(sys.modules.get('asepl_utils.parse_args', sys))
-  reload(sys.modules.get('asepl_utils.set_save_grad_hooks', sys))
-  reload(sys.modules.get('asepl_utils.cosine_similarity', sys))
-  reload(sys.modules.get('asepl_utils.effect_per_layer', sys))
-  reload(sys.modules.get('asepl_utils', sys))
-
-  reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
-  reload(sys.modules.get('utils.load_model_and_tokenizer', sys))
-  reload(sys.modules.get('utils.load_json_dataset', sys))
-  reload(sys.modules.get('utils.load_hidden_states_cache', sys))
-  reload(sys.modules.get('utils.compute_candidate_directions', sys))
-  reload(sys.modules.get('utils.prepare_queries', sys))
-  reload(sys.modules.get('utils', sys))
+  reload_modules(
+    project_root=project_root,
+  )
 
 from asepl_utils import parse_args
 from asepl_utils import set_save_grad_hooks
 from asepl_utils import compute_create_save_cosine_similarities_plot
 from asepl_utils import create_effect_per_layer_plot
 
-from utils import use_deterministic_algorithms
+from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import load_hidden_states_cache
@@ -85,24 +72,28 @@ for key, value in args.items():
 # %%
 
 print("Using deterministic algorithms for reproducibility.")
-use_deterministic_algorithms()
+enable_reproducibility()
 
 # %%
 
 print("Loading model and tokenizer.")
-device_map = {
-  "transformer.wte": 0,
-  "freqs_cis": 0,
-  "transformer.prelude": 0,
-  "transformer.adapter": 0,
-  "transformer.core_block.0": 0,
-  "transformer.core_block.1": 1,
-  "transformer.core_block.2": 2,
-  "transformer.core_block.3": 3,
-  "transformer.coda": 3,
-  "transformer.ln_f": 3,
-  "lm_head": 0,
-}
+match args["model_name"]:
+  case name if name.startswith("huginn-"):
+    device_map = {
+      "transformer.wte": 0,
+      "freqs_cis": 0,
+      "transformer.prelude": 0,
+      "transformer.adapter": 0,
+      "transformer.core_block.0": 0,
+      "transformer.core_block.1": 1,
+      "transformer.core_block.2": 2,
+      "transformer.core_block.3": 3,
+      "transformer.coda": 3,
+      "transformer.ln_f": 3,
+      "lm_head": 0,
+    }
+  case _:
+    raise ValueError(f"Model type {args['model_name']} is not supported for loading.")
 
 model, tokenizer = load_model_and_tokenizer(
   models_path=args['models_path'],

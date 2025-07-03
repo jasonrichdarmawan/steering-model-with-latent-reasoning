@@ -12,25 +12,15 @@ if project_root not in sys.path:
 # %%
 
 if False:
-  import sys
-  from importlib import reload
+  from utils import reload_modules
 
-  print("Reloading modules to ensure the latest code is used.")
-
-  reload(sys.modules.get('ele_utils.parse_args', sys))
-  reload(sys.modules.get('ele_utils', sys))
-
-  reload(sys.modules.get('utils.use_deterministic_algorithms', sys))
-  reload(sys.modules.get('utils.huginn_wrapper', sys))
-  reload(sys.modules.get('utils.load_json_dataset', sys))
-  reload(sys.modules.get('utils.load_hidden_states_cache', sys))
-  reload(sys.modules.get('utils.compute_candidate_directions', sys))
-  reload(sys.modules.get('utils.projection_hook', sys))
-  reload(sys.modules.get('utils', sys))
+  reload_modules(
+    project_root=project_root,
+  )
 
 from ele_utils import parse_args
 
-from utils import use_deterministic_algorithms
+from utils import enable_reproducibility
 from utils import HuginnWrapper
 from utils import load_json_dataset
 from utils import load_hidden_states_cache
@@ -83,7 +73,7 @@ for key, value in args.items():
 # %%
 
 print("Setting deterministic algorithms for reproducibility.")
-use_deterministic_algorithms()
+enable_reproducibility()
 
 # %%
 
@@ -156,13 +146,19 @@ else:
 
 if args['with_intervention']:
   print("Setting up projection hooks for the model.")
-  projection_hook_config = ProjectionHookConfig(
-    layer_indices=args['layer_indices'],
-    candidate_directions=candidate_directions,
-    pre_hook=args['with_pre_hook'],
-    post_hook=args['with_post_hook'],
-    scale=args['scale']
-  )
+  match model.config.model_type:
+    case "huginn_raven":
+      projection_hook_config = ProjectionHookConfig(
+        layer_indices=args['layer_indices'],
+        candidate_directions=candidate_directions,
+        hidden_states_hooks={
+          "pre_hook": args['with_pre_hook'],
+          "post_hook": args['with_post_hook'],
+        },
+        scale=args['scale'],
+      )
+    case _:
+      raise ValueError(f"Unsupported model type for projection hooks: {model.config.model_type}")
 
   hooks = set_activations_hooks(
     model=model.model,

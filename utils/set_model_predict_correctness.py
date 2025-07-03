@@ -1,15 +1,36 @@
 import re
-import random
 import warnings
+from typing import NamedTuple
+
+class NoAnswerWarning(NamedTuple):
+  query: str
+  response: str
+  expected_answer: str
+
+  def __str__(self):
+    return (
+      f"\n{'='*20}\n"
+      f"Warning: No answer found.\n"
+      f"Query:\n{self.query}\n"
+      f"\n{' '*20}{'='*20}\n"
+      f"Response:\n{self.response}\n"
+      f"\n{' '*40}{'='*20}\n"
+      f"Expected Answer:\n{self.expected_answer}\n"
+      f"{'='*60}\n"
+    )
 
 def set_model_predict_correctness(
   entries: list[str],
   queries: list[str],
   responses: list[str],
-  test_dataset_name: str
+  test_dataset_name: str,
+  no_answers: list[NoAnswerWarning] | None = None,
 ):
+  if no_answers is None:
+    no_answers: list[NoAnswerWarning] = []
+
   match test_dataset_name:
-    case 'mmlu-pro-3000samples.json':
+    case 'mmlu-pro':
       for entry, query, response in zip(entries, queries, responses):
         entry['solution'] = response
         
@@ -19,23 +40,20 @@ def set_model_predict_correctness(
         )
 
         if prediction is None:
-          warnings.warn(
-            f"\n{'='*60}\n"
-            f"Warning: No answer found.\n"
-            f"Query:\n{query}\n"
-            f"Answer: {entry['answer']}\n"
-            f"Response:\n{response}\n"
-            f"{'='*60}\n"
+          no_answer = NoAnswerWarning(
+            query=query,
+            response=response,
+            expected_answer=entry['answer']
           )
-          return random.choice(
-            ['A', 'B', 'C', 'D', 'E', 
-            'F', 'G', 'H', 'I', 'J']
-          )
+          no_answers.append(no_answer)
+          warnings.warn(str(no_answer))
 
         if entry["answer"] == prediction:
           entry["model_predict_correctness"] = True
         else:
           entry["model_predict_correctness"] = False
+
+      return no_answers
     case _:
       raise ValueError(f"Unsupported test dataset name: {test_dataset_name}")
 
@@ -44,7 +62,7 @@ def get_prediction(
   test_dataset_name: str
 ) -> str | None:
   match test_dataset_name:
-    case 'mmlu-pro-3000samples.json':
+    case 'mmlu-pro':
       pattern = r"answer is \(?([ABCDEFGHIJ])\)?"
       match = re.search(pattern, output)
       if match:

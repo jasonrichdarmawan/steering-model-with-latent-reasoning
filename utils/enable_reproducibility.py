@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 
-def use_deterministic_algorithms():
+def enable_reproducibility():
   """
   Warning: Deterministic operations are often slower
   than nondeterministic operations, so single-run
@@ -19,9 +19,9 @@ def use_deterministic_algorithms():
   # internally. Consequently, calling it multiple
   # times back-to-back with the same input arguments
   # may give different results.
-  torch.manual_seed(0)
+  torch.manual_seed(seed=0)
   
-  random.seed(0)
+  random.seed(a=0)
 
   # Seed the global NumPy RNG
   # However, some applications and libraries may
@@ -29,7 +29,7 @@ def use_deterministic_algorithms():
   # global RNG (https://numpy.org/doc/stable/reference/random/generator.html), 
   # and those will need to be seeded consistently 
   # as well.
-  np.random.seed(0)
+  np.random.seed(seed=0)
 
   # causes cuDNN to deterministically select an algorithm,
   # possibly at the cost of reduced performance.
@@ -37,8 +37,9 @@ def use_deterministic_algorithms():
 
   # Avoiding nondeterministic algorithms
   torch.use_deterministic_algorithms(
-    True,
-    warn_only=True)
+    mode=True,
+    warn_only=True,
+  )
   
   # CUDA convolution determinism
   # While disabling CUDA convolution benchmarking

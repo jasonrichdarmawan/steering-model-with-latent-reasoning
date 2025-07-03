@@ -13,25 +13,17 @@ def prepare_fewshot_prompts(
   """
 
   match data_name:
-    case 'mmlu-pro-3000samples.json' | 'mmlu-pro':
+    case 'mmlu-pro':
       dataset = load_from_disk(
-        os.path.join(data_path, 'mmlu-pro')
+        dataset_path=os.path.join(data_path, data_name),
       )
       val_dataset = dataset['validation']
-
-      categories = [
-        'computer science', 'math', 'chemistry',
-        'engineering', 'law', 'biology', 'health', 
-        'physics', 'business', 'philosophy', 
-        'economics', 'other', 'psychology', 
-        'history'
-      ]
       
       fewshot_prompts: dict[
         str, list[str]
       ] = {
         category: []
-        for category in categories
+        for category in set(val_dataset['category'])
       }
 
       for entry in val_dataset:
@@ -44,11 +36,11 @@ def prepare_fewshot_prompts(
           # - example_cot includes the question, options, and the chain-of-thought (CoT) reasoning content.
           #   The CoT content in entry['cot_content'] already starts with "A: Let's think step by step. ...".
           # - example_no_cot includes the question, options, and a direct answer in the format "A: The answer is (answer)."
-          fewshot_prompt = f"Q: {question}\n{options}\n{entry['cot_content']}\n\n"
+          fewshot_prompt = f"Q: {question}\n{options}\n{entry['cot_content']}"
         else:
           # Note: The original code does not include the prefix "A: " before the answer.
           # Here, we do not follow the original format and only prepend "The answer is (...)." after the options.
-          fewshot_prompt = f"Q: {question}\n{options}\nA: The answer is ({entry['answer']}).\n\n"
+          fewshot_prompt = f"Q: {question}\n{options}\nA: The answer is ({entry['answer']})."
         
         fewshot_prompts[category].append(fewshot_prompt)
       

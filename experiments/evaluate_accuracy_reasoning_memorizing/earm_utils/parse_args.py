@@ -4,7 +4,6 @@ import argparse
 class Args(TypedDict):
   models_path: str
   model_name: str
-  device: str
 
   huginn_num_steps: int | None
 
@@ -16,10 +15,11 @@ class Args(TypedDict):
   batch_size: int
 
   with_intervention: bool
+  hidden_states_data_file_path: str | None
   hidden_states_cache_file_path: str | None
   layer_indices: list[int]
-  with_pre_hook: bool
-  with_post_hook: bool
+  with_hidden_states_pre_hook: bool
+  with_hidden_states_post_hook: bool
   scale: float
 
   output_file_path: str | None
@@ -39,12 +39,6 @@ def parse_args() -> Args:
     help="Folder name of the specific model to load from the root directory",
     type=str,
     default="huginn-0125",
-  )
-  parser.add_argument(
-    '--device', 
-    help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
-    type=str, 
-    default="auto",
   )
   
   parser.add_argument(
@@ -94,6 +88,12 @@ def parse_args() -> Args:
     help="Whether to apply the intervention for reasoning and memorization accuracy evaluation"
   )
   parser.add_argument(
+    '--hidden_states_data_file_path',
+    type=str,
+    help="Path to the JSON file containing the hidden states dataset for intervention",
+    default=None,
+  )
+  parser.add_argument(
     '--hidden_states_cache_file_path',
     type=str,
     help="Path to the cached hidden states",
@@ -107,12 +107,12 @@ def parse_args() -> Args:
     default=[66]
   )
   parser.add_argument(
-    '--with_pre_hook',
+    '--with_hidden_states_pre_hook',
     action="store_true",
     help="Whether to use pre-hook for the intervention"
   )
   parser.add_argument(
-    '--with_post_hook',
+    '--with_hidden_states_post_hook',
     action="store_true",
     help="Whether to use post-hook for the intervention"
   )

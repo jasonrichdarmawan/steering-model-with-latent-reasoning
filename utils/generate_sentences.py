@@ -1,6 +1,7 @@
 import torch
 from torch import nn
-from transformers import GenerationConfig, PreTrainedTokenizerBase
+from transformers import GenerationConfig
+from transformers import PreTrainedTokenizerBase
 
 def generate_sentences_huginn(
   model: nn.Module,
@@ -25,27 +26,55 @@ def generate_sentences_huginn(
     return_dict_in_generate=False,
     eos_token_id=65505,
     bos_token_id=65504,
-    pad_token_id=65509
+    pad_token_id=65509,
   )
 
-  input_ids = tokenizer(
+  inputs = tokenizer(
     text,
     return_tensors="pt",
-    add_special_tokens=False,
+    add_special_tokens=True,
     padding="longest",
     return_token_type_ids=False,
-  ).input_ids.to(model.device)
+  ).to(model.device)
 
   with torch.no_grad():
     outputs = model.generate(
-      input_ids,
-      config,
+      input_ids=inputs.input_ids,
+      attention_mask=inputs.attention_mask,
+      generation_config=config,
       num_steps=num_steps,
       tokenizer=tokenizer,
     )
 
   generated_texts = tokenizer.batch_decode(
-    outputs[:, input_ids.shape[1]:],
+    outputs[:, inputs.input_ids.shape[1]:],
+    skip_special_tokens=True,
+  )
+
+  return generated_texts
+
+def generate_sentences_lirefs(
+  model: nn.Module,
+  tokenizer: PreTrainedTokenizerBase,
+  text: list[str],
+):
+  inputs = tokenizer(
+    text=text,
+    return_tensors="pt",
+    padding="longest",
+    return_token_type_ids=False,
+  ).to(device=model.device)
+
+  with torch.no_grad():
+    outputs = model.generate(
+      input_ids=inputs.input_ids,
+      attention_mask=inputs.attention_mask,
+      max_new_tokens=200,
+      do_sample=False,
+    )
+  
+  generated_texts = tokenizer.batch_decode(
+    outputs[:, inputs.input_ids.shape[1]:],
     skip_special_tokens=True,
   )
 

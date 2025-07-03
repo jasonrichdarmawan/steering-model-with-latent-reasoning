@@ -2,14 +2,14 @@ import unittest
 
 import torch
 
-from utils import use_deterministic_algorithms
+from utils import enable_reproducibility
 
 class TestUseDeterministicAlgorithms(unittest.TestCase):
   def test_use_deterministic_algorithms(self):
     """
     TODO: real test
     """
-    use_deterministic_algorithms()
+    enable_reproducibility()
 
     def run_nondeterministic_code():
       torch.manual_seed(0)
