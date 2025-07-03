@@ -80,7 +80,7 @@ def get_mmlu_pro(
         with_intervention=True,
         layer_indices=[21],
         with_hidden_states_pre_hook=True,
-        with_hidden_states_post_hook=True,
+        with_hidden_states_post_hook=False,
       )
     )
 

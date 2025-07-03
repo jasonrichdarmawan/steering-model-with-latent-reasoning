@@ -57,13 +57,12 @@ def parse_args() -> Args:
     '--test_data_name',
     help="Folder name of the specific dataset to load from the root directory",
     type=str,
-    default="mmlu-pro-3000samples.json",
   )
   parser.add_argument(
     '--test_data_sample_size',
     type=int,
     help="Number of samples to randomly select from the test dataset",
-    default=200,
+    default=None,
   )
   parser.add_argument(
     '--with_fewshot_prompts',

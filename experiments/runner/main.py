@@ -109,7 +109,7 @@ for i, job in enumerate(EXPERIMENT_JOBS):
   failed = False
   failed_at = None
   for j, cmd in enumerate(job):
-    print(f"\nRunning command {i+1}/{len(EXPERIMENT_JOBS)}.")
+    print(f"\nRunning command {j+1}/{len(job)}.")
     print("#" * 60)
     print(f"Command:\n{cmd}")
     process = subprocess.Popen(

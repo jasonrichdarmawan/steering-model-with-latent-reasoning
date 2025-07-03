@@ -39,7 +39,7 @@ import torch
 
 # %%
 
-if True:
+if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
@@ -136,7 +136,7 @@ if args['with_fewshot_prompts']:
     data_name=args['test_data_name'],
     with_cot=args['with_cot'],
   )
-  print(f"Prepared few-shot prompts for {args['test_data_name']} with {len(fewshot_prompts)} samples.")
+  print(f"Prepared few-shot prompts for {args['test_data_name']} with {len(fewshot_prompts)} categories.")
 else:
   print("No few-shot prompts will be used for the test dataset.")
   fewshot_prompts = None
@@ -294,6 +294,10 @@ for queries_batch, entries_batch in tqdm(
 
 # %%
 
+print(f"No answers found in the dataset: {len(no_answers)}")
+
+# %%
+
 if args['with_intervention']:
   print("Removing projection hooks from the model.")
   for hook in hooks:
@@ -353,7 +357,7 @@ try:
   output = torch.load(
     args['output_file_path'],
     map_location='cpu',
-    weights_only=True
+    weights_only=False,
   )
 except FileNotFoundError as e:
   print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
