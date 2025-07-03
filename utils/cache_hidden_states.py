@@ -12,7 +12,7 @@ def cache_hidden_states(
   hidden_states_cache: dict[int, Float[Tensor, "batch n_embd"]] | None = None,
 ):
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       hidden_states_cache = _cache_hidden_states_huginn(
         model=model,
         tokenizer=tokenizer,
@@ -33,7 +33,7 @@ def cache_hidden_states(
 
 def get_n_embd(model) -> int:
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       return model.config.n_embd
     case "llama":
       return model.config.hidden_size

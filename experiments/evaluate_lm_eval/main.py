@@ -78,7 +78,7 @@ enable_reproducibility()
 # %%
 
 match args["model_name"]:
-  case name if name.startswith("huginn-"):
+  case "huginn-0125":
     """
     # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
@@ -198,7 +198,7 @@ if args["use_local_datasets"]:
 # %%
 
 match args["model_name"]:
-  case name if name.startswith("huginn-"):
+  case "huginn-0125":
     results = simple_evaluate(
       model=model,
       tasks=args['tasks'],

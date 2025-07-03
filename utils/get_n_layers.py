@@ -1,6 +1,6 @@
 def get_n_layers(model) -> int:
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       return model.config.effective_expected_depth + 1
     case "llama":
       return model.config.num_hidden_layers + 1

@@ -20,7 +20,7 @@ def compute_candidate_directions(
   candidate_directions: dict[int, Float[Tensor, "n_layers n_embd"]] = {}
 
   match model.config.model_type:
-    case name if name.startswith("huginn_") or "llama":
+    case "huginn_raven" | "llama":
       # Build a mapping from layer index to CUDA device id
       device_map = get_device_map(model=model)
     case _:
@@ -54,7 +54,7 @@ def get_device_map(
   device_map: dict[int, int] = {}
 
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       n_layers = get_n_layers(model)
 
       if len(model.hf_device_map) == 1:

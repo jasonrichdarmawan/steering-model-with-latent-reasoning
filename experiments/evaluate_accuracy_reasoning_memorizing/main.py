@@ -39,7 +39,7 @@ import torch
 
 # %%
 
-if False:
+if True:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
@@ -47,9 +47,9 @@ if False:
   sys.argv = [
     'main.py',
     '--models_path', f'{root_path}/transformers',
-    '--model_name', 'huginn-0125',
+    '--model_name', 'Meta-Llama-3-8B',
 
-    '--huginn_num_steps', '32',
+    # '--huginn_num_steps', '32',
 
     '--test_data_path', f'{root_path}/datasets/lirefs',
     '--test_data_name', 'mmlu-pro',
@@ -60,13 +60,13 @@ if False:
 
     '--with_intervention',
     '--hidden_states_data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
-    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
-    '--layer_indices', '129',
-    # '--with_hidden_states_pre_hook',
-    '--with_hidden_states_post_hook',
+    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/Meta-Llama-3-8B_mmlu-pro-3000samples.pt',
+    '--layer_indices', '21',
+    '--with_hidden_states_pre_hook',
+    # '--with_hidden_states_post_hook',
     '--scale', '0.1',
 
-    '--output_file_path', f'{root_path}/experiments/reasoning_memorizing_accuracy/huginn-0125.json'
+    '--output_file_path', f'{root_path}/experiments/reasoning_memorizing_accuracy/Meta-Llama-3-8B.json'
   ]
 
 args = parse_args()
@@ -86,7 +86,7 @@ if args['batch_size'] > 1:
 # %%
 
 match args["model_name"]:
-  case name if name.startswith("huginn-"):
+  case "huginn-0125":
     device_map = {
       "transformer.wte": 0,
       "freqs_cis": 0,
@@ -100,6 +100,8 @@ match args["model_name"]:
       "transformer.ln_f": 1,
       "lm_head": 0,
     }
+  case "Meta-Llama-3-8B":
+    device_map = "auto"
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 
@@ -264,7 +266,7 @@ for queries_batch, entries_batch in tqdm(
   total=len(queries_batched)
 ):
   match model.config.model_type:
-    case name if "huginn_" in name:
+    case "huginn_raven":
       responses = generate_sentences_huginn(
         model=model,
         tokenizer=tokenizer,

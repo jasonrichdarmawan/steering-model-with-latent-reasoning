@@ -73,7 +73,7 @@ def prepare_query(
   match model_name:
     # TODO: assess whether we need
     # to handle each model type separately
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       query = _prepare_query_huginn(
         question_content=question_content,
         tokenizer=tokenizer,

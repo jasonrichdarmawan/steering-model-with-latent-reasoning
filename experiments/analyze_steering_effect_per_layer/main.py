@@ -78,7 +78,7 @@ enable_reproducibility()
 
 print("Loading model and tokenizer.")
 match args["model_name"]:
-  case name if name.startswith("huginn-"):
+  case "huginn-0125":
     device_map = {
       "transformer.wte": 0,
       "freqs_cis": 0,
@@ -196,7 +196,7 @@ def compute_kl_divergence(logits: Float[Tensor, "batch seq_len n_embd"]):
   return kl_div(probs, detached_probs, reduction="batchmean")
 
 match model.config.model_type:
-  case name if name.startswith("huginn_"):
+  case "huginn_raven":
     effects: dict[int, list[float]] = {}
 
     for queries_batch in tqdm(queries_batched):
@@ -346,7 +346,7 @@ fig.savefig(
 # %%
 
 match model.config.model_type:
-  case name if name.startswith("huginn_"):
+  case "huginn_raven":
     compute_create_save_cosine_similarities_plot(
       candidate_directions=candidate_directions,
       x2=model.transformer.wte.weight.data,

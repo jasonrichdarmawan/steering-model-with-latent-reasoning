@@ -17,10 +17,10 @@ class Args(TypedDict):
   with_intervention: bool
   hidden_states_data_file_path: str | None
   hidden_states_cache_file_path: str | None
-  layer_indices: list[int]
+  layer_indices: list[int] | None
   with_hidden_states_pre_hook: bool
   with_hidden_states_post_hook: bool
-  scale: float
+  scale: float | None
 
   output_file_path: str | None
 
@@ -104,7 +104,7 @@ def parse_args() -> Args:
     type=int,
     nargs='+',
     help="Indices of the layers to apply the intervention",
-    default=[66]
+    default=None
   )
   parser.add_argument(
     '--with_hidden_states_pre_hook',
@@ -119,7 +119,7 @@ def parse_args() -> Args:
   parser.add_argument(
     '--scale',
     type=float,
-    default=0.1,
+    default=None,
     help="Scale factor for the projection direction"
   )
   

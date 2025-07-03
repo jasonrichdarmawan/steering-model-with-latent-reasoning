@@ -22,7 +22,7 @@ def set_activations_hooks(
   hooks: list[RemovableHandle] = []
 
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       hooks = set_activations_hooks_huginn(
         model=model,
         candidate_directions=candidate_directions,

@@ -11,7 +11,7 @@ def set_save_grad_hooks(
   gradient_mode: GradientMode,
 ):
   match model.config.model_type:
-    case name if name.startswith("huginn_"):
+    case "huginn_raven":
       outputs = _save_grad_hooks_huginn(
         model=model,
         gradient_mode=gradient_mode,

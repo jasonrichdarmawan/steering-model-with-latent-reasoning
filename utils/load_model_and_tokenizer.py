@@ -39,7 +39,7 @@ def load_model(
   trust_remote_code = True
 
   match model_name:
-    case name if name.startswith("huginn-"):
+    case "huginn-0125":
       # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/9f84159bc548f4fe75a577d71575c35ef80e1977/examples/inference_demo.ipynb
       if torch_dtype is None:
         torch_dtype = torch.bfloat16
@@ -74,7 +74,7 @@ def load_tokenizer(
   )
 
   match model_name:
-    case name if "huginn" in name:
+    case "huginn-0125":
       """
       Reference: https://github.com/seal-rg/recurrent-pretraining/blob/9f84159bc548f4fe75a577d71575c35ef80e1977/examples/inference_demo.ipynb
       """
