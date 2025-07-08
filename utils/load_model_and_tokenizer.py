@@ -13,7 +13,7 @@ from models import recpre
 def load_model_and_tokenizer(
   models_path: str, 
   model_name: str,
-  device_map: str = "cuda" if torch.cuda.is_available() else "cpu",
+  device_map: str | dict[str, int] = "cuda" if torch.cuda.is_available() else "cpu",
   torch_dtype: torch.dtype | None = None,
 ):
   model = load_model(
@@ -37,6 +37,14 @@ def load_model(
   torch_dtype: torch.dtype | None = None,
 ):
   trust_remote_code = True
+
+  # Restore the default settings for torch.backends.cuda
+  # to avoid RuntimeError: No available kernel. Aborting execution.
+  # The error was caused because we import the models.recpre folder
+  torch.backends.cuda.enable_flash_sdp(True)
+  torch.backends.cuda.enable_math_sdp(True)
+  torch.backends.cuda.enable_mem_efficient_sdp(True)
+  torch.backends.cuda.enable_cudnn_sdp(True)
 
   match model_name:
     case "huginn-0125":

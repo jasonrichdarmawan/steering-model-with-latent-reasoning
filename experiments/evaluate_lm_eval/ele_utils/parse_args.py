@@ -1,23 +1,24 @@
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
+
 from typing import TypedDict
 import argparse
 
 class Args(TypedDict):
-  use_local_datasets: bool
   data_path: str | None
 
   models_path: str
   model_name: str
-  device: str
-  with_parallelize: bool
 
-  huginn_model_criterion: str | None
-  huginn_num_steps: int | None
+  huginn_mean_recurrence: int | None
 
   with_intervention: bool
-  hidden_states_cache_file_path: str | None
+  candidate_directions_file_path: str | None
+  direction_normalization_mode: DirectionNormalizationMode | None
+  projection_hook_mode: ProjectionHookMode | None
   layer_indices: list[int] | None
-  with_pre_hook: bool
-  with_post_hook: bool
+  with_hidden_states_pre_hook: bool
+  with_hidden_states_post_hook: bool
   scale: float | None
 
   tasks: str
@@ -32,15 +33,9 @@ def parse_args() -> Args:
   )
 
   parser.add_argument(
-    '--use_local_datasets',
-    action='store_true',
-    help="Use local datasets instead of downloading from Hugging Face.",
-  )
-  parser.add_argument(
     '--data_path',
     type=str,
-    help="Path to the local datasets directory. If specified, will use local datasets instead of downloading.",
-    default=None,
+    help="Path to the local datasets directory",
   )
 
   parser.add_argument(
@@ -52,31 +47,13 @@ def parse_args() -> Args:
     '--model_name',
     type=str,
     help="Folder name of the specific model to load from the root directory",
-    default="huginn-0125",
-  )
-  parser.add_argument(
-    '--device',
-    type=str,
-    help="Device to run the model on, e.g., 'cuda', 'cpu', or 'auto' for automatic selection",
-    default="auto",
-  )
-  parser.add_argument(
-    '--with_parallelize',
-    action='store_true',
-    help="Whether to use parallel processing for evaluation. If set, will use lm_eval's parallelize function.",
   )
 
   parser.add_argument(
-    '--huginn_model_criterion',
-    type=str,
-    help="Criterion for the model evaluation",
-    default="entropy-diff",
-  )
-  parser.add_argument(
-    '--huginn_num_steps',
+    '--huginn_mean_recurrence',
     type=int,
-    help="Number of steps for Huginn model evaluation. If None, will use the default behavior of the model.",
-    default=32,
+    help="Number of mean recurrence for Huginn model evaluation",
+    default=None,
   )
 
   parser.add_argument(
@@ -85,9 +62,23 @@ def parse_args() -> Args:
     help="Whether to apply intervention during evaluation.",
   )
   parser.add_argument(
-    '--hidden_states_cache_file_path',
+    '--candidate_directions_file_path',
     type=str,
-    help="Path to the hidden states cache file. If specified, will load the hidden states from this file.",
+    help="Path to the candidate directions file. If specified, will load the candidate directions from this file.",
+    default=None,
+  )
+  parser.add_argument(
+    '--direction_normalization_mode',
+    type=DirectionNormalizationMode,
+    choices=list(DirectionNormalizationMode),
+    help="Normalization mode for the candidate directions.",
+    default=None,
+  )
+  parser.add_argument(
+    '--projection_hook_mode',
+    type=ProjectionHookMode,
+    choices=list(ProjectionHookMode),
+    help="Mode for the projection hook intervention.",
     default=None,
   )
   parser.add_argument(
@@ -95,47 +86,45 @@ def parse_args() -> Args:
     type=int,
     nargs='+',
     help="Indices of the layers to apply the intervention",
+    default=None,
   )
   parser.add_argument(
-    '--with_pre_hook',
+    '--with_hidden_states_pre_hook',
     action='store_true',
-    help="Whether to apply the pre-hook intervention",
+    help="Whether to apply the hidden states pre-hook intervention",
   )
   parser.add_argument(
-    '--with_post_hook',
+    '--with_hidden_states_post_hook',
     action='store_true',
-    help="Whether to apply the post-hook intervention",
+    help="Whether to apply the hidden states post-hook intervention",
   )
   parser.add_argument(
     '--scale',
     type=float,
     help="Scale factor for the intervention. If None, will use the default scale of 0.1.",
-    default=0.1,
+    default=None,
   )
 
   parser.add_argument(
     '--tasks',
     type=str,
     help="Comma-separated list of tasks to evaluate the model on",
-    default="mmlu",
   )
   parser.add_argument(
     '--num_fewshot',
     type=int,
     help="Number of few-shot examples to use for evaluation",
-    default=5,
   )
   parser.add_argument(
     '--batch_size',
     type=lambda x: int(x) if x.isdigit() else x,
     help='Batch size for evaluation (int or "auto")',
-    default=4,
   )
   parser.add_argument(
     '--limit',
     type=int,
     help="Limit the number of samples to evaluate",
-    default=50,
+    default=None,
   )
   parser.add_argument(
     '--output_file_path',
@@ -144,13 +133,6 @@ def parse_args() -> Args:
     default=None,
   )
 
-  args, _ = parser.parse_known_args()
-
-  if args.with_intervention and not args.hidden_states_cache_file_path:
-    raise ValueError("If --with_intervention is set, --hidden_states_cache_file_path must also be specified.")
-  if args.with_intervention and not args.layer_indices:
-    raise ValueError("If --with_intervention is set, --layer_indices must be specified.")
-  if args.with_intervention and not (args.with_pre_hook or args.with_post_hook):
-    raise ValueError("If --with_intervention is set, at least one of --with_pre_hook or --with_post_hook must be specified.")
+  args = parser.parse_args()
 
   return args.__dict__

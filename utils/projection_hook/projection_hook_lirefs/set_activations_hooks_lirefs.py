@@ -1,6 +1,7 @@
 from utils.projection_hook.projection_hook_lirefs import ProjectionHookConfigLiReFs
 from utils.projection_hook.projection_hook_lirefs import ProjectionPreHookLiReFs
 from utils.projection_hook.projection_hook_lirefs import ProjectionPostHookLiReFs
+from utils.projection_hook.projection_hook_lirefs import ProjectionPostHookLiReFsModuleType
 
 from torch import nn
 from torch import Tensor
@@ -9,7 +10,7 @@ from torch.utils.hooks import RemovableHandle
 
 def set_activations_hooks_lirefs(
   model: nn.Module,
-  candidate_directions: Float[Tensor, "n_layers n_embd"],
+  directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfigLiReFs,
   hooks: list[RemovableHandle] | None = None,
 ) -> list[RemovableHandle]:
@@ -29,13 +30,14 @@ def set_activations_hooks_lirefs(
 
   for layer_index in config["layer_indices"]:
 
-    direction = candidate_directions[layer_index]
+    direction = directions[layer_index]
     scale = config["scale"]
 
     # hidden_states
     if config["hidden_states_hooks"]:
       if config["hidden_states_hooks"]["pre_hook"]:
         pre_hook = ProjectionPreHookLiReFs(
+          mode=config["mode"],
           direction=direction,
           scale=scale,
         )
@@ -59,7 +61,8 @@ def set_activations_hooks_lirefs(
 
       if config["attention_hooks"]["post_hook"]:
         post_hook = ProjectionPostHookLiReFs(
-          type="attention",
+          type=ProjectionPostHookLiReFsModuleType.ATTENTION,
+          mode=config["mode"],
           direction=direction,
           scale=scale,
         )
@@ -81,7 +84,8 @@ def set_activations_hooks_lirefs(
 
       if config["mlp_hooks"]["post_hook"]:
         post_hook = ProjectionPostHookLiReFs(
-          type="mlp",
+          type=ProjectionPostHookLiReFsModuleType.MLP,
+          mode=config["mode"],
           direction=direction,
           scale=scale,
         )

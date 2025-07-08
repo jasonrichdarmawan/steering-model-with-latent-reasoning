@@ -1,4 +1,5 @@
 from .hook_config import *
+from .projection_hook_mode import *
 from .projection_hook_config import *
 from .projection_hook_huginn import *
 from .projection_hook_lirefs import *

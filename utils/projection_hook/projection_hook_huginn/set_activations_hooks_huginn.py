@@ -10,7 +10,7 @@ from typing import NamedTuple
 
 def set_activations_hooks_huginn(
   model: nn.Module,
-  candidate_directions: Float[Tensor, "n_layers n_embd"],
+  directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfig,
   hooks: list[RemovableHandle] | None = None,
 ) -> list[RemovableHandle]:
@@ -44,8 +44,9 @@ def set_activations_hooks_huginn(
     if config["hidden_states_hooks"]["pre_hook"]:
       print(f"Registering pre-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       pre_hook = ProjectionPreHookHuginn(
+        mode=config["mode"],
         selected_depth_indices=depth_indices,
-        candidate_directions=candidate_directions,
+        directions=directions,
         scale=config["scale"],
       )
       hook = module.register_forward_pre_hook(
@@ -57,8 +58,9 @@ def set_activations_hooks_huginn(
     if config["hidden_states_hooks"]["post_hook"]:
       print(f"Registering post-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       post_hook = ProjectionPostHookHuginn(
+        mode=config["mode"],
         selected_depth_indices=depth_indices,
-        candidate_directions=candidate_directions,
+        directions=directions,
         scale=config["scale"],
       )
       hook = module.register_forward_hook(

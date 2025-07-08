@@ -20,16 +20,19 @@ if False:
 
 from ele_utils import parse_args
 
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
+from utils import ProcessHiddenStatesMode
 from utils import enable_reproducibility
+from utils import load_model
 from utils import HuginnWrapper
-from utils import load_json_dataset
-from utils import load_hidden_states_cache
-from utils import compute_candidate_directions
+from utils import compute_directions
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
 
 from os.path import join
 import torch
+from lm_eval.models.huggingface import HFLM
 from lm_eval import simple_evaluate
 
 # %%
@@ -38,30 +41,34 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/media/tao/disk4T/jason"
+  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  MODEL_NAME = "huginn-0125"
+  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
+  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
+  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_ADDITION)
   sys.argv = [
     'main.py',
-    '--use_local_datasets',
-    '--data_path', f'{root_path}/datasets',
+    '--data_path', f'{WORKSPACE_PATH}/datasets',
 
-    '--models_path', f'{root_path}/transformers',
-    '--model_name', 'huginn-0125',
-    '--device', 'cuda',
-    '--with_parallelize',
+    '--models_path', f'{WORKSPACE_PATH}/transformers',
+    '--model_name', MODEL_NAME,
 
-    '--huginn_model_criterion', 'entropy-diff',
-    '--huginn_num_steps', '32',
+    '--huginn_mean_recurrence', '32',
 
     '--with_intervention',
-    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
-    '--layer_indices', '66',
-    '--with_post_hook',
+    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
+    '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
+    '--projection_hook_mode', PROJECTION_HOOK_MODE,
+    '--layer_indices', '129',
+    # '--with_hidden_states_pre_hook',
+    '--with_hidden_states_post_hook',
+    '--scale', '1.0',
 
     '--tasks', 'mmlu',
     '--num_fewshot', '0',
     '--batch_size', '1',
     '--limit', '1',
-    '--output_file_path', f'{root_path}/experiments/lm_eval_results/huginn-0125.json',
+    '--output_file_path', f'{WORKSPACE_PATH}/experiments/lm_eval_results/{MODEL_NAME}.json',
   ]
 
 args = parse_args()
@@ -79,65 +86,84 @@ enable_reproducibility()
 
 match args["model_name"]:
   case "huginn-0125":
+    device_map = {
+      "transformer.wte": 0,
+      "freqs_cis": 0,
+      "transformer.prelude": 0,
+      "transformer.adapter": 0,
+      "transformer.core_block.0": 0,
+      "transformer.core_block.1": 0,
+      "transformer.core_block.2": 1,
+      "transformer.core_block.3": 1,
+      "transformer.coda": 1,
+      "transformer.ln_f": 1,
+      "lm_head": 0,
+    }
+  case _:
+    raise ValueError(f"Unsupported model name: {args['model_name']}")
+
+# %%
+
+match args["model_name"]:
+  case "huginn-0125":
     """
     # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
-    model = HuginnWrapper(
+    # model = load_model(
+    #   models_path=args["models_path"],
+    #   model_name=args["model_name"],
+    #   device_map=device_map,
+    # )
+    model = HFLM(
       pretrained=join(
         args["models_path"], 
         args["model_name"]
       ),
-      backend="causal",
-      device=args["device"],
-      batch_size=args["batch_size"],
-      trust_remote_code=False,
+      parallelize=True,
+      device_map=device_map,
+      mean_recurrence=args["huginn_mean_recurrence"],
       dtype=torch.bfloat16,
-      criterion=args["huginn_model_criterion"],
-      exit_threshold="auto",
-      lookup_strategy="full",
-      continuous_compute=False,
-      latent_dampening=False,
-      parallelize=args["with_parallelize"]
     )
+
+    # model = HuginnWrapper(
+    #   pretrained=join(
+    #     args["models_path"], 
+    #     args["model_name"]
+    #   ),
+    #   backend="causal",
+    #   device_map=device_map,
+    #   batch_size=args["batch_size"],
+    #   trust_remote_code=False,
+    #   dtype=torch.bfloat16,
+    #   criterion="entropy-diff",
+    #   exit_threshold="auto",
+    #   lookup_strategy="full",
+    #   continuous_compute=False,
+    #   latent_dampening=False,
+    # )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 
 # %%
 
 if args["with_intervention"]:
-  print("Loading mmlu-pro-3000samples dataset for intervention.")
-  file_path = os.path.join(
-    args['data_path'],
-    "lirefs",
-    "mmlu-pro-3000samples.json"
-  )
-  mmlu_pro_3000samples_dataset = load_json_dataset(
-    file_path=file_path,
+  print(f"Computing directions from file: {args['candidate_directions_file_path']}")
+  candidate_directions = torch.load(
+    args['candidate_directions_file_path'],
+    map_location='cpu',
+    weights_only=False,
   )
 
-  reasoning_indices = [
-    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
-    if sample['memory_reason_score'] > 0.5
-  ]
-  memorizing_indices = [
-    index for index, sample in enumerate(mmlu_pro_3000samples_dataset) 
-    if sample['memory_reason_score'] <= 0.5
-  ]
-
-# %%
-
-if args["with_intervention"]:
-  print("Loading hidden states cache for intervention.")
-  hidden_states_cache = load_hidden_states_cache(
-    file_path=args['hidden_states_cache_file_path'],
-  )
-
-  candidate_directions = compute_candidate_directions(
+  directions = compute_directions(
     model=model.model,
-    hidden_states_cache=hidden_states_cache,
-    reasoning_indices=reasoning_indices,
-    memorizing_indices=memorizing_indices,
+    candidate_directions=candidate_directions,
+    positive_label="reasoning",
+    negative_label="memorizing",
+    overall_label="overall",
+    normalization_mode=args['direction_normalization_mode'],
   )
+
+  del candidate_directions
 else:
   print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
   candidate_directions = None
@@ -149,11 +175,12 @@ if args['with_intervention']:
   match model.config.model_type:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
+        mode=args['projection_hook_mode'],
         layer_indices=args['layer_indices'],
-        candidate_directions=candidate_directions,
+        directions=directions,
         hidden_states_hooks={
-          "pre_hook": args['with_pre_hook'],
-          "post_hook": args['with_post_hook'],
+          "pre_hook": args['with_hidden_states_pre_hook'],
+          "post_hook": args['with_hidden_states_post_hook'],
         },
         scale=args['scale'],
       )
@@ -162,7 +189,7 @@ if args['with_intervention']:
 
   hooks = set_activations_hooks(
     model=model.model,
-    candidate_directions=candidate_directions,
+    directions=directions,
     config=projection_hook_config,
   )
 else:
@@ -170,30 +197,28 @@ else:
 
 # %%
 
-if args["use_local_datasets"]:
-  from typing import Optional, Any
-  import datasets
-  from lm_eval.api.task import ConfigurableTask
+from typing import Optional, Any
+import datasets
+from lm_eval.api.task import ConfigurableTask
 
-  def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
-    path = os.path.join(
-      args["data_path"], 
-      self.DATASET_PATH,
-    )
-    print(f"Loading dataset from local path: {path}")
-    self.dataset = datasets.load_dataset(
-      path=path,
-      name=self.DATASET_NAME,
-      **dataset_kwargs if dataset_kwargs is not None else {},
-    )
-
-  print(
-    "Overriding ConfigurableTask.download to load datasets from local path.\n"
-    f"Specified location: {args['data_path']}/<dataset-name>\n"
-    "Ensure dataset files (including Python scripts) exist at the specified location.\n"
-    "If using a mirror, update dataset scripts to use hf-mirror.com if huggingface.co is inaccessible.\n"
+def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
+  path = os.path.join(
+    args["data_path"], 
+    self.DATASET_PATH,
   )
-  ConfigurableTask.download = download
+  print(f"Loading dataset from local path: {path}")
+  self.dataset = datasets.load_dataset(
+    path=path,
+    name=self.DATASET_NAME,
+    **dataset_kwargs if dataset_kwargs is not None else {},
+  )
+
+print(
+  "Overriding ConfigurableTask.download to load datasets from local path.\n"
+  f"Specified location: {args['data_path']}/<dataset-name>\n"
+  "Ensure dataset files (including Python scripts) exist at the specified location.\n"
+)
+ConfigurableTask.download = download
 
 # %%
 
@@ -204,7 +229,6 @@ match args["model_name"]:
       tasks=args['tasks'],
       num_fewshot=args["num_fewshot"],
       limit=args["limit"],
-      gen_kwargs=f"num_steps={args['huginn_num_steps']}",
     )["results"]
     print(f"Evaluation results:\n{results}")
   case _:
@@ -228,7 +252,7 @@ try:
   output = torch.load(
     args["output_file_path"],
     map_location='cpu',
-    weights_only=False
+    weights_only=False,
   )
 except FileNotFoundError:
   print(f"File not found: {args['output_file_path']}. Creating a new results dictionary.")
@@ -241,15 +265,21 @@ output_key = ' '.join(
     f"{key}={value}"
     for key, value in args.items()
     if key in [ 
+      'model_name',
+      
+      'huginn_mean_recurrence',
+      
+      'with_intervention',
+      'direction_normalization_mode',
+      'projection_hook_mode',
+      'layer_indices',
+      'with_hidden_states_pre_hook',
+      'with_hidden_states_post_hook',
+      'scale',
+
       'tasks',
       'num_fewshot',
       'limit',
-      'huginn_num_steps',
-      'with_intervention',
-      'layer_indices',
-      'with_pre_hook',
-      'with_post_hook',
-      'scale',
     ]
   ]
 )

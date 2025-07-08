@@ -20,18 +20,20 @@ if False:
 
 from earm_utils import parse_args
 
+from utils import ProcessHiddenStatesMode
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
 from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
-from utils import load_hidden_states_cache
 from utils import load_json_dataset
-from utils import compute_candidate_directions
+from utils import compute_directions
 from utils import prepare_fewshot_prompts
 from utils import prepare_queries
 from utils import ProjectionHookConfig
 from utils import ProjectionHookConfigLiReFs
 from utils import set_activations_hooks
-from utils import generate_sentences_huginn
-from utils import generate_sentences_lirefs
+from utils import tokenize_text
+from utils import generate
 from utils import set_model_predict_correctness
 
 from tqdm import tqdm
@@ -43,30 +45,35 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/media/npu-tao/disk4T/jason"
+  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  MODEL_NAME="huginn-0125"
+  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
+  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
+  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_ADDITION)
   sys.argv = [
     'main.py',
-    '--models_path', f'{root_path}/transformers',
-    '--model_name', 'Meta-Llama-3-8B',
+    '--models_path', f'{WORKSPACE_PATH}/transformers',
+    '--model_name', MODEL_NAME,
 
-    # '--huginn_num_steps', '32',
+    '--huginn_num_steps', '129',
 
-    '--test_data_path', f'{root_path}/datasets/lirefs',
+    '--test_data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
     '--test_data_name', 'mmlu-pro',
-    '--test_data_sample_size', '200',
+    '--test_data_sample_size', '24',
     '--with_fewshot_prompts',
     # '--with_cot',
     '--batch_size', '1',
 
     '--with_intervention',
-    '--hidden_states_data_file_path', f'{root_path}/datasets/lirefs/mmlu-pro-3000samples.json',
-    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/Meta-Llama-3-8B_mmlu-pro-3000samples.pt',
+    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
+    '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
+    '--projection_hook_mode', PROJECTION_HOOK_MODE,
     '--layer_indices', '21',
     '--with_hidden_states_pre_hook',
     # '--with_hidden_states_post_hook',
-    '--scale', '0.1',
+    '--scale', '1.0',
 
-    '--output_file_path', f'{root_path}/experiments/reasoning_memorizing_accuracy/Meta-Llama-3-8B.json'
+    '--output_file_path', f'{WORKSPACE_PATH}/experiments/reasoning_memorizing_accuracy/Meta-Llama-3-8B.json'
   ]
 
 args = parse_args()
@@ -79,9 +86,6 @@ for key, value in args.items():
 
 print("Setting deterministic algorithms for reproducibility.")
 enable_reproducibility()
-
-if args['batch_size'] > 1:
-  print("torch.nn.functional.scaled_dot_product_attention (e.g., used in Meta-Llama-3-8B) throws error when batch size is larger than 1 and the package models.recpre is imported")
 
 # %%
 
@@ -101,7 +105,7 @@ match args["model_name"]:
       "lm_head": 0,
     }
   case "Meta-Llama-3-8B":
-    device_map = "auto"
+    device_map = "cuda:0"
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 
@@ -120,11 +124,15 @@ model, tokenizer = load_model_and_tokenizer(
 # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/main/reasoning_representation/Intervention/features_intervention.py
 match args['test_data_name']:
   case "mmlu-pro":
+    file_path = os.path.join(
+      args['test_data_path'],
+      "mmlu-pro-3000samples.json"
+    )
     test_dataset = load_json_dataset(
-      file_path=args["hidden_states_data_file_path"],
+      file_path=file_path,
       sample_size=args['test_data_sample_size'],
     )
-    print(f"Loaded test dataset from {args['hidden_states_data_file_path']} with {len(test_dataset)} samples.")
+    print(f"Loaded test dataset from {file_path} with {len(test_dataset)} samples.")
   case _:
     raise ValueError(f"Unsupported test data name: {args['test_data_name']}")
 
@@ -174,45 +182,22 @@ entries_batched = [
 # %%
 
 if args['with_intervention']:
-  hidden_states_data_file_path = load_json_dataset(
-    file_path=args['hidden_states_data_file_path'],
+  print("Computing directions for the model.")
+  candidate_directions = torch.load(
+    args['candidate_directions_file_path'],
+    map_location='cpu',
+    weights_only=False,
   )
-  print(f"Loaded hidden states dataset from {args['hidden_states_data_file_path']} with {len(hidden_states_data_file_path)} samples.")
-
-  reasoning_indices = [
-    index for index, sample in enumerate(hidden_states_data_file_path) 
-    if sample['memory_reason_score'] > 0.5
-  ]
-  memorizing_indices = [
-    index for index, sample in enumerate(hidden_states_data_file_path) 
-    if sample['memory_reason_score'] <= 0.5
-  ]
-
-# %%
-
-if args['with_intervention']:
-  hidden_states_cache = load_hidden_states_cache(
-    file_path=args['hidden_states_cache_file_path'],
-  )
-  print(f"Loaded hidden states cache from {args['hidden_states_cache_file_path']} with {len(hidden_states_cache)} layers.")
-
-# %%
-
-if args['with_intervention']:
-  candidate_directions = compute_candidate_directions(
+  directions = compute_directions(
     model=model,
-    hidden_states_cache=hidden_states_cache,
-    reasoning_indices=reasoning_indices,
-    memorizing_indices=memorizing_indices,
-    layer_indices=args['layer_indices'],
+    candidate_directions=candidate_directions,
+    positive_label="reasoning",
+    negative_label="memorizing",
+    overall_label="overall",
+    normalization_mode=args['direction_normalization_mode'],
   )
-  print(f"Computed candidate directions for layers {args['layer_indices']} with {len(candidate_directions)} candidate directions.")
 
-# %%
-
-if args['with_intervention'] is False:
-  print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
-  candidate_directions = None
+  del candidate_directions
 
 # %%
 
@@ -221,8 +206,9 @@ if args['with_intervention']:
   match model.config.model_type:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
+        mode=args['projection_hook_mode'],
         layer_indices=args['layer_indices'],
-        candidate_directions=candidate_directions,
+        directions=directions,
         hidden_states_hooks={
           "pre_hook": args['with_hidden_states_pre_hook'],
           "post_hook": args['with_hidden_states_post_hook'],
@@ -231,8 +217,9 @@ if args['with_intervention']:
       )
     case "llama":
       projection_hook_config = ProjectionHookConfigLiReFs(
+        mode=args['projection_hook_mode'],
         layer_indices=args['layer_indices'],
-        candidate_directions=candidate_directions,
+        directions=directions,
         hidden_states_hooks={
           "pre_hook": args['with_hidden_states_pre_hook'],
           "post_hook": args['with_hidden_states_post_hook'], # Not implemented
@@ -251,7 +238,7 @@ if args['with_intervention']:
       raise ValueError(f"Unsupported model type: {model.config.model_type}")
   hooks = set_activations_hooks(
     model=model,
-    candidate_directions=candidate_directions,
+    directions=directions,
     config=projection_hook_config,
   )
 else:
@@ -265,22 +252,25 @@ for queries_batch, entries_batch in tqdm(
   zip(queries_batched, entries_batched),
   total=len(queries_batched)
 ):
-  match model.config.model_type:
-    case "huginn_raven":
-      responses = generate_sentences_huginn(
-        model=model,
-        tokenizer=tokenizer,
-        text=queries_batch,
-        num_steps=args["huginn_num_steps"],
-      )
-    case "llama":
-      responses = generate_sentences_lirefs(
-        model=model,
-        tokenizer=tokenizer,
-        text=queries_batch,
-      )
-    case _:
-      raise ValueError(f"Unsupported model type: {model.config.model_type}")
+  inputs = tokenize_text(
+    model=model,
+    tokenizer=tokenizer,
+    text=queries_batch,
+  )
+
+  with torch.no_grad():
+    outputs = generate(
+      model=model,
+      input_ids=inputs["input_ids"],
+      attention_mask=inputs["attention_mask"],
+      tokenizer=tokenizer,
+      huginn_num_steps=args.get("huginn_num_steps", None)
+    )
+  
+  responses = tokenizer.batch_decode(
+    outputs[:, inputs["input_ids"].shape[1]:],
+    skip_special_tokens=True,
+  )
 
   no_answers = set_model_predict_correctness(
     entries=entries_batch,
@@ -289,6 +279,9 @@ for queries_batch, entries_batch in tqdm(
     test_dataset_name=args['test_data_name'],
     no_answers=no_answers,
   )
+
+  del inputs
+  del responses
 
   torch.cuda.empty_cache()
 
@@ -316,7 +309,6 @@ def _compute_accuracy(
     raise None
   correct = sum(entry.get("model_predict_correctness", False) for entry in entries)
   accuracy = correct / total
-  print(f"{label} Accuracy: {accuracy:.4f} ({correct}/{total})")
   return accuracy
 
 match args['test_data_name']:
@@ -334,14 +326,19 @@ match args['test_data_name']:
       if entry['memory_reason_score'] <= 0.5
     ]
 
+    reasoning_label = f"Layer {args['layer_indices']} - Reasoning Subset"
     reasoning_accuracy = _compute_accuracy(
       entries=reasoning_entries,
-      label=f"Layer {args['layer_indices']} - Reasoning Subset"
+      label=reasoning_label
     )
+    print(f"{reasoning_label} Accuracy: {reasoning_accuracy:.4f}")
+    
+    memorizing_label = f"Layer {args['layer_indices']} - Memorizing Subset"
     memorizing_accuracy = _compute_accuracy(
       entries=memorizing_entries,
-      label=f"Layer {args['layer_indices']} - Memorizing Subset"
+      label=memorizing_label
     )
+    print(f"{memorizing_label} Accuracy: {memorizing_accuracy:.4f}")
   case _:
     raise ValueError(f"Unsupported test data name: {args['test_data_name']}")
 
@@ -353,6 +350,7 @@ if args['output_file_path'] is None:
 
 # %%
 
+print(f"Loading existing results from {args['output_file_path']} if available.")
 try:
   output = torch.load(
     args['output_file_path'],
@@ -374,10 +372,13 @@ output_key = ' '.join(
       'test_data_name', 
       'with_fewshot_prompts',
       'with_intervention',
+      'candidate_directions_file_path',
+      'direction_normalization_mode',
+      'projection_hook_mode',
       'layer_indices',
       'with_hidden_states_pre_hook',
       'with_hidden_states_post_hook',
-      'scale'
+      'scale',
     ]
   ]
 )

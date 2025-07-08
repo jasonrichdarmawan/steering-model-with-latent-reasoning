@@ -161,7 +161,7 @@ def _prepare_query_huginn(
     query = user_content
     return query
 
-  messages: list[str] = []
+  messages: list[dict[str, str]] = []
   
   if system_prompt:
     messages.append({

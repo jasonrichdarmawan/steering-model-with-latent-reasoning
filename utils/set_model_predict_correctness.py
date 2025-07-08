@@ -13,9 +13,9 @@ class NoAnswerWarning(NamedTuple):
       f"Warning: No answer found.\n"
       f"Query:\n{self.query}\n"
       f"\n{' '*20}{'='*20}\n"
-      f"Response:\n{self.response}\n"
-      f"\n{' '*40}{'='*20}\n"
       f"Expected Answer:\n{self.expected_answer}\n"
+      f"\n{' '*40}{'='*20}\n"
+      f"Response:\n{self.response}\n"
       f"{'='*60}\n"
     )
 

@@ -19,18 +19,21 @@ if False:
   )
 
 from asepl_utils import parse_args
+from asepl_utils import GradientMode
 from asepl_utils import set_save_grad_hooks
-from asepl_utils import compute_create_save_cosine_similarities_plot
 from asepl_utils import create_effect_per_layer_plot
+from asepl_utils import compute_cosine_similarities
+from asepl_utils import create_cosine_similarity_plot
 
+from utils import ProcessHiddenStatesMode
+from utils import DirectionNormalizationMode
 from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
-from utils import load_hidden_states_cache
-from utils import compute_candidate_directions
+from utils import compute_directions
 from utils import prepare_queries
+from utils import tokenize_text
 
-import random
 from tqdm import tqdm
 import torch
 from torch import Tensor
@@ -46,22 +49,27 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  root_path = "/media/npu-tao/disk4T/jason"
+  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  MODEL_NAME = "huginn-0125"
+  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
+  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
   sys.argv = [
     'main.py',
 
-    '--models_path', f'{root_path}/transformers',
-    '--model_name', 'huginn-0125',
-
-    '--hidden_states_cache_file_path', f'{root_path}/experiments/hidden_states_cache/huginn-0125_mmlu-pro-3000samples.pt',
-    '--data_path', f'{root_path}/datasets/lirefs',
-    '--data_name', 'mmlu-pro-3000samples.json',
-    # '--data_sample_size', '24',
-    '--data_batch_size', '1',
+    '--models_path', f'{WORKSPACE_PATH}/transformers',
+    '--model_name', MODEL_NAME,
 
     '--huginn_num_steps', '32',
 
-    '--output_path', f'{root_path}/experiments/analyze_steering_effect_per_layer/huginn-0125',
+    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
+    '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
+
+    '--data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
+    '--data_name', 'mmlu-pro-3000samples.json',
+    '--data_sample_size', '24',
+    '--data_batch_size', '1',
+
+    '--output_path', f'{WORKSPACE_PATH}/experiments/analyze_steering_effect_per_layer/huginn-0125',
   ]
 
 args = parse_args()
@@ -85,13 +93,15 @@ match args["model_name"]:
       "transformer.prelude": 0,
       "transformer.adapter": 0,
       "transformer.core_block.0": 0,
-      "transformer.core_block.1": 1,
-      "transformer.core_block.2": 2,
-      "transformer.core_block.3": 3,
-      "transformer.coda": 3,
-      "transformer.ln_f": 3,
+      "transformer.core_block.1": 0,
+      "transformer.core_block.2": 1,
+      "transformer.core_block.3": 1,
+      "transformer.coda": 1,
+      "transformer.ln_f": 1,
       "lm_head": 0,
     }
+  case "Meta-Llama-3-8B":
+    device_map = "cuda:0"
   case _:
     raise ValueError(f"Model type {args['model_name']} is not supported for loading.")
 
@@ -106,61 +116,42 @@ print(model.hf_device_map)
 
 # %%
 
+print(f"Compute directions from file: {args['candidate_directions_file_path']}")
+candidate_directions = torch.load(
+  args['candidate_directions_file_path'],
+  map_location='cpu',
+  weights_only=False,
+)
+directions = compute_directions(
+  model=model,
+  candidate_directions=candidate_directions,
+  positive_label="reasoning",
+  negative_label="memorizing",
+  overall_label="overall",
+  normalization_mode=args['direction_normalization_mode'],
+)
+
+del candidate_directions
+
+# %%
+
 file_path = os.path.join(
   args['data_path'],
   args['data_name'],
 )
 
-print(f"Loading dataset from file: {file_path}")
+print(f"Loading dataset from JSON file with sample size {args['data_sample_size']}: {file_path}")
 data = load_json_dataset(
   file_path=file_path,
+  sample_size=args['data_sample_size'],
 )
-
-print("Determining reasoning and memorizing indices based on memory_reason_score.")
-reasoning_indices = [
-  index for index, sample in enumerate(data)
-  if sample["memory_reason_score"] > 0.5
-]
-
-memorizing_indices = [
-  index for index, sample in enumerate(data)
-  if sample["memory_reason_score"] <= 0.5
-]
-
-# %%
-
-print("Loading hidden states cache from file.")
-hidden_states_cache = load_hidden_states_cache(
-  file_path=args['hidden_states_cache_file_path'],
-)
-
-# %%
-
-print("Computing candidate directions based on hidden states cache.")
-candidate_directions = compute_candidate_directions(
-  model=model,
-  hidden_states_cache=hidden_states_cache,
-  reasoning_indices=reasoning_indices,
-  memorizing_indices=memorizing_indices,
-)
-
-# %%
-
-if args['data_sample_size']:
-  print(f"Sampling {args['data_sample_size']} samples from the dataset.")
-  sampled_data = random.sample(
-    data, args['data_sample_size']
-  )
-else:
-  print("No data sample size specified, using the entire dataset.")
-  sampled_data = data
 
 # %%
 
 print("Preparing queries for the model.")
 queries = prepare_queries(
   model_name=model.config.model_type,
-  data=sampled_data,
+  data=data,
   data_name=args['data_name'],
   tokenizer=tokenizer,
   apply_chat_template=False,
@@ -181,7 +172,7 @@ queries_batched = [
 print("Setting up save_grad hooks for the model with gradient_mode last_token.")
 save_grad_hooks, gradients = set_save_grad_hooks(
   model=model,
-  gradient_mode="last_token",
+  gradient_mode=GradientMode.LAST_TOKEN,
 )
 
 # %%
@@ -200,19 +191,15 @@ match model.config.model_type:
     effects: dict[int, list[float]] = {}
 
     for queries_batch in tqdm(queries_batched):
-      model.zero_grad()
-      gradients.clear()
-      
-      input_ids = tokenizer(
-        queries_batch,
-        return_tensors='pt',
-        add_special_tokens=False,
-        padding='longest',
-        return_token_type_ids=False,
-      ).input_ids.to(device=model.device)
+      inputs = tokenize_text(
+        model=model,
+        tokenizer=tokenizer,
+        text=queries_batch,
+      )
 
       outputs = model(
-        input_ids=input_ids,
+        input_ids=inputs["input_ids"],
+        attention_mask=inputs["attention_mask"],
         num_steps=(0, args["huginn_num_steps"]),
         output_details={
           "return_logits": True,
@@ -227,19 +214,21 @@ match model.config.model_type:
       loss.backward()
 
       for layer_index in list(
-        gradients.keys() & candidate_directions.keys()
+        gradients.keys() & directions.keys()
       ):
         effect = (
-          gradients[layer_index][:, -1:]
-          @ candidate_directions[layer_index]
+          gradients[layer_index]
+          @ directions[layer_index]
         ).mean().abs()
         if effects.get(layer_index) is None:
           effects[layer_index] = []
         effects[layer_index].append(effect.item())
 
-      del input_ids
+      del inputs
       del outputs
       del loss
+      model.zero_grad()
+      gradients.clear()
       gc.collect()
       torch.cuda.empty_cache()
   case _:
@@ -297,14 +286,13 @@ output_key = ' '.join(
     if key in [
       'model_name',
 
+      'huginn_num_steps',
+
       'data_name',
       'data_sample_size',
 
-      'huginn_num_steps',
-
-      'with_pre_hook',
-      'with_post_hook',
-      'projection_scale',
+      'candidate_direction_file_path'
+      'direction_normalization_mode',
     ]
   ]
 )
@@ -345,18 +333,79 @@ fig.savefig(
 
 # %%
 
+def process(
+  x1: dict[int, Float[Tensor, "n_embd"]],
+  x2: Float[Tensor, "block_size n_embd"],
+  x2_name: str,
+  output_file_path: str | None = None,
+):
+  """
+  High cosine similarity between candidate directions 
+  and model embedding or unembedding layers can indicate 
+  that the model retains token representation information
+  in early layers rather than behavioral patterns. 
+  In other words, the effect value computed in these layers
+  can be misleading.
+
+  Reference: https://github.com/cvenhoff/steering-thinking-llms/blob/83fc94a7c0afd9d96ca418897d8734a8b94ce848/train-steering-vectors/cosine_sim.py
+  """
+  cosine_similarities = compute_cosine_similarities(
+    x1=x1,
+    x2=x2,
+  )
+
+  print(f"Layers by the highest cosine similarity between candidate directions and {x2_name}:")
+  top_cosine_similarities = sorted(
+    cosine_similarities.items(),
+    key=lambda item: item[1],
+    reverse=True,
+  )
+  for layer_index, cosine_similarity in top_cosine_similarities:
+    print(f"Layer {layer_index}: {cosine_similarity:.4f}")
+
+  cosine_similarities_fig = create_cosine_similarity_plot(
+    cosine_similarities=cosine_similarities,
+    x2_name=x2_name,
+  )
+
+  if output_file_path is None:
+    print("No output file path specified. Plot will not be saved.")
+    return
+  
+  print(f"Saving the cosine similarity between candidate directions and {x2_name} plot to: {output_file_path}")
+  cosine_similarities_fig.savefig(
+    fname=output_file_path,
+    dpi=300,
+    bbox_inches='tight',
+    pad_inches=0.1,
+  )
+
+  return cosine_similarities
+
 match model.config.model_type:
   case "huginn_raven":
-    compute_create_save_cosine_similarities_plot(
-      candidate_directions=candidate_directions,
+    cosine_similarities = process(
+      x1=directions,
       x2=model.transformer.wte.weight.data,
+      x2_name="embedding layer weight",
       output_file_path=os.path.join(
         args['output_path'],
         f"{args['model_name']}_cosine_similarities_embed.pdf"
       ),
-      x2_name="embedding layer weight",
     )
   case _:
     raise ValueError(f"Model type {model.config.model_type} is not supported for cosine similarity analysis.")
+
+# %%
+
+for layer_index, effect_values in top_effects:
+  mean_effect = np.mean(effect_values)
+  std_effect = np.std(effect_values)
+  similarity = cosine_similarities[layer_index]
+  print(
+    f"Layer {layer_index}: "
+    f"effect={mean_effect:.4f} ± {std_effect:.4f}, "
+    f"cosine similarity={similarity:.4f}"
+  )
 
 # %%

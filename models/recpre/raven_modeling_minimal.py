@@ -443,6 +443,12 @@ class RavenForCausalLM(RavenPreTrainedModel, GenerationMixin):
         return_head = output_details["return_head"]
         all_hidden_states: dict[int, Float[Tensor, "batch seq_len n_embd"]] = {}
 
+        if attention_mask is not None and attention_mask.ndim == 2:
+            if return_attn:
+                attention_mask = attention_mask.unsqueeze(dim=1).unsqueeze(dim=2) == 0
+            else:
+                attention_mask = attention_mask.unsqueeze(dim=1).unsqueeze(dim=2).to(dtype=torch.bool)
+
         # Non-recurrent prelude
         for block_idx, block in enumerate(self.transformer.prelude):
             input_embeds, attn_map, all_hidden_states = block(

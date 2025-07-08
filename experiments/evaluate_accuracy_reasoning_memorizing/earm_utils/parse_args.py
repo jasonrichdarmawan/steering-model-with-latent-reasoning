@@ -1,3 +1,6 @@
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
+
 from typing import TypedDict
 import argparse
 
@@ -15,8 +18,9 @@ class Args(TypedDict):
   batch_size: int
 
   with_intervention: bool
-  hidden_states_data_file_path: str | None
-  hidden_states_cache_file_path: str | None
+  candidate_directions_file_path: str | None
+  direction_normalization_mode: DirectionNormalizationMode | None
+  projection_hook_mode: ProjectionHookMode | None
   layer_indices: list[int] | None
   with_hidden_states_pre_hook: bool
   with_hidden_states_post_hook: bool
@@ -38,18 +42,17 @@ def parse_args() -> Args:
     '--model_name', 
     help="Folder name of the specific model to load from the root directory",
     type=str,
-    default="huginn-0125",
   )
   
   parser.add_argument(
-    '--huginn_num_steps', 
+    '--huginn_num_steps',
     help="Number of steps for Huginn model evaluation. If None, will use the default behavior of the model.",
-    type=int, 
+    type=int,
     default=None,
   )
 
   parser.add_argument(
-    '--test_data_path', 
+    '--test_data_path',
     type=str,
     help="Path to the root directory containing multiple data folders",
   )
@@ -77,8 +80,7 @@ def parse_args() -> Args:
   parser.add_argument(
     '--batch_size',
     type=int,
-    default=1,
-    help="Batch size for processing the test dataset"
+    help="Batch size for processing the test dataset",
   )
 
   parser.add_argument(
@@ -87,15 +89,23 @@ def parse_args() -> Args:
     help="Whether to apply the intervention for reasoning and memorization accuracy evaluation"
   )
   parser.add_argument(
-    '--hidden_states_data_file_path',
+    '--candidate_directions_file_path',
     type=str,
-    help="Path to the JSON file containing the hidden states dataset for intervention",
+    help="Path to the file containing the candidate directions for intervention",
     default=None,
   )
   parser.add_argument(
-    '--hidden_states_cache_file_path',
-    type=str,
-    help="Path to the cached hidden states",
+    '--direction_normalization_mode',
+    type=DirectionNormalizationMode,
+    choices=list(DirectionNormalizationMode),
+    help="Normalization mode for the candidate directions.",
+    default=None, 
+  )
+  parser.add_argument(
+    '--projection_hook_mode',
+    type=ProjectionHookMode,
+    choices=list(ProjectionHookMode),
+    help="Mode for the projection hook intervention.",
     default=None,
   )
   parser.add_argument(

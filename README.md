@@ -45,23 +45,26 @@ You can see the list of jobs in the [experiments/runner/jobs](experiments/runner
 A job consists of multiple sub-jobs. If you want to run specific
 sub-job, then see the `experiments/runner/jobs/[job_name]/_[job_name].py` file
 
-## How to save hidden states?
+## How to save candidate directions?
 
 ```shell
 WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
-python experiments/runner/main.py \
+python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_save_hidden_states \
+--jobs mmlu_pro_save_candidate_directions \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
+
+mmlu_pro_save_candidate_directions
+mmlu_pro_meta-llama-3-8b_save_candidate_directions
 
 ## How to analyze steering effect per layer?
 
 ```bash
-WORKSPACE_PATH="/root/autodl-fs"
+WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
-python experiments/runner/main.py \
+python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
 --jobs mmlu_pro_analyze_steering_effect_per_layer \
 --output_path "$WORKSPACE_PATH/experiments/runner"
@@ -76,7 +79,7 @@ I rented 4x 3090 for 2 hours. This is no longer an issue.
 ```bash
 WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
-python experiments/runner/main.py \
+python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
 --jobs mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention \
 --output_path "$WORKSPACE_PATH/experiments/runner"
@@ -87,7 +90,7 @@ python experiments/runner/main.py \
 ```bash
 WORKSPACE_PATH="/media/tao/disk4T/jason"
 
-python experiments/runner/main.py \
+python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
 --jobs mmlu_evaluate_lm_eval_with_intervention_129 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
