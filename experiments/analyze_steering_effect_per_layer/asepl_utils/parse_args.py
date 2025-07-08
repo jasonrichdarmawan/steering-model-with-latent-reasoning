@@ -1,3 +1,4 @@
+from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 
 from typing import TypedDict
@@ -9,8 +10,9 @@ class Args(TypedDict):
 
   huginn_num_steps: int | None
 
+  process_hidden_states_mode: ProcessHiddenStatesMode
   candidate_directions_file_path: str
-  direction_normalization_mode: DirectionNormalizationMode | None
+  direction_normalization_mode: DirectionNormalizationMode
 
   data_path: str
   data_name: str
@@ -44,6 +46,12 @@ def parse_args() -> Args:
     default=None,
   )
 
+  parser.add_argument(
+    '--process_hidden_states_mode',
+    type=ProcessHiddenStatesMode,
+    choices=list(ProcessHiddenStatesMode),
+    help='Mode for processing hidden states during the experiment.',
+  )
   parser.add_argument(
     '--candidate_directions_file_path',
     type=str,

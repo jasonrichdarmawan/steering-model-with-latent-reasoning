@@ -14,6 +14,7 @@ python experiments/evaluate_lm_eval/main.py \
 {huginn_mean_recurrence_arg} \
 \
 {with_intervention_flag} \
+{process_hidden_states_mode_arg} \
 {candidate_directions_file_path_arg} \
 {direction_normalization_mode_arg} \
 {projection_hook_mode_arg} \
@@ -43,6 +44,7 @@ def get_evaluate_lm_eval(
   with_intervention_flag = "--with_intervention" if with_intervention else ""
   
   process_hidden_states_mode = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
+  process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
   candidate_directions_file_path_arg = f"\"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
 
   direction_normalization_mode = str(DirectionNormalizationMode.UNIT_VECTOR)
@@ -66,6 +68,7 @@ def get_evaluate_lm_eval(
     tasks=tasks,
 
     with_intervention_flag=with_intervention_flag,
+    process_hidden_states_mode_arg=process_hidden_states_mode_arg,
     candidate_directions_file_path_arg=candidate_directions_file_path_arg,
     direction_normalization_mode_arg=direction_normalization_mode_arg,
     projection_hook_mode_arg=projection_hook_mode_arg,

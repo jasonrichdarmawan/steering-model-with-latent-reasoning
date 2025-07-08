@@ -56,6 +56,7 @@ if False:
     '--huginn_mean_recurrence', '32',
 
     '--with_intervention',
+    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
     '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
     '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
     '--projection_hook_mode', PROJECTION_HOOK_MODE,
@@ -270,6 +271,7 @@ output_key = ' '.join(
       'huginn_mean_recurrence',
       
       'with_intervention',
+      'process_hidden_states_mode',
       'direction_normalization_mode',
       'projection_hook_mode',
       'layer_indices',

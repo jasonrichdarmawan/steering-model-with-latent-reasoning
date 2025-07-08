@@ -61,6 +61,7 @@ if False:
 
     '--huginn_num_steps', '32',
 
+    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
     '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
     '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
 
@@ -69,7 +70,7 @@ if False:
     '--data_sample_size', '24',
     '--data_batch_size', '1',
 
-    '--output_path', f'{WORKSPACE_PATH}/experiments/analyze_steering_effect_per_layer/huginn-0125',
+    '--output_path', f'{WORKSPACE_PATH}/experiments/analyze_steering_effect_per_layer/{MODEL_NAME}',
   ]
 
 args = parse_args()
@@ -291,7 +292,7 @@ output_key = ' '.join(
       'data_name',
       'data_sample_size',
 
-      'candidate_direction_file_path'
+      'process_hidden_states_mode',
       'direction_normalization_mode',
     ]
   ]
@@ -320,7 +321,7 @@ fig = create_effect_per_layer_plot(
 
 output_plot_path = os.path.join(
   args['output_path'],
-  f"{args['model_name']}_effect_per_layer.pdf"
+  f"{args['model_name']}_{args['process_hidden_states_mode']}_{args['direction_normalization_mode']}_effect_per_layer.pdf"
 )
 print(f"Saving the effect per layer plot to: {output_plot_path}")
 fig.savefig(
@@ -337,7 +338,7 @@ def process(
   x1: dict[int, Float[Tensor, "n_embd"]],
   x2: Float[Tensor, "block_size n_embd"],
   x2_name: str,
-  output_file_path: str | None = None,
+  fig_file_path: str | None = None,
 ):
   """
   High cosine similarity between candidate directions 
@@ -368,13 +369,13 @@ def process(
     x2_name=x2_name,
   )
 
-  if output_file_path is None:
-    print("No output file path specified. Plot will not be saved.")
+  if fig_file_path is None:
+    print("No figure file path specified. Plot will not be saved.")
     return
   
   print(f"Saving the cosine similarity between candidate directions and {x2_name} plot to: {output_file_path}")
   cosine_similarities_fig.savefig(
-    fname=output_file_path,
+    fname=fig_file_path,
     dpi=300,
     bbox_inches='tight',
     pad_inches=0.1,
@@ -388,9 +389,9 @@ match model.config.model_type:
       x1=directions,
       x2=model.transformer.wte.weight.data,
       x2_name="embedding layer weight",
-      output_file_path=os.path.join(
+      fig_file_path=os.path.join(
         args['output_path'],
-        f"{args['model_name']}_cosine_similarities_embed.pdf"
+        f"{args['model_name']}_{args['process_hidden_states_mode']}_{args['direction_normalization_mode']}_embed_cosine_similarities.pdf"
       ),
     )
   case _:

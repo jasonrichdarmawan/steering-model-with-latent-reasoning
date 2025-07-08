@@ -42,6 +42,7 @@ from tqdm import tqdm
 if False:
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
   sys.argv = [
     'main.py',
     '--models_path', f'{WORKSPACE_PATH}/transformers',
@@ -55,7 +56,7 @@ if False:
     '--data_sample_size', '24',
     '--data_batch_size', '1',
 
-    '--process_hidden_states_mode', str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN),
+    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
 
     '--output_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions',
   ]

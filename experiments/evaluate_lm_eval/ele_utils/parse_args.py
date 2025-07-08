@@ -1,3 +1,4 @@
+from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 
@@ -13,6 +14,7 @@ class Args(TypedDict):
   huginn_mean_recurrence: int | None
 
   with_intervention: bool
+  process_hidden_states_mode: ProcessHiddenStatesMode | None
   candidate_directions_file_path: str | None
   direction_normalization_mode: DirectionNormalizationMode | None
   projection_hook_mode: ProjectionHookMode | None
@@ -60,6 +62,13 @@ def parse_args() -> Args:
     '--with_intervention',
     action='store_true',
     help="Whether to apply intervention during evaluation.",
+  )
+  parser.add_argument(
+    '--process_hidden_states_mode',
+    type=ProcessHiddenStatesMode,
+    choices=list(ProcessHiddenStatesMode),
+    help="Mode for processing hidden states during the intervention.",
+    default=None,
   )
   parser.add_argument(
     '--candidate_directions_file_path',
