@@ -1,3 +1,5 @@
+from utils import ProcessHiddenStatesMode
+
 from jobs import get_save_candidate_directions
 from jobs import get_analyze_steering_effect_per_layer
 from jobs import get_evaluate_lm_eval
@@ -10,25 +12,75 @@ def get_mmlu_pro(
   
   jobs = []
   
+  # huginn-0125 specific jobs
   if job == "mmlu_pro" or job == "mmlu_pro_save_candidate_directions":
     job = get_save_candidate_directions(
       workspace_path=workspace_path,
       model_name="huginn-0125",
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
     )
     jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_save_candidate_directions_all_tokens":
+    job = get_save_candidate_directions(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+    )
+    jobs.append(job)
+  
+  # Meta-LLama-3-8B specific jobs
   if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_save_candidate_directions":
     job = get_save_candidate_directions(
       workspace_path=workspace_path,
       model_name="Meta-Llama-3-8B",
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+    )
+    jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens":
+    job = get_save_candidate_directions(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
     )
     jobs.append(job)
 
+  # huginn-0125 specific jobs
   if job == "mmlu_pro" or job == "mmlu_pro_analyze_steering_effect_per_layer":
     job = get_analyze_steering_effect_per_layer(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+    )
+    jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_analyze_steering_effect_per_layer_all_tokens":
+    job = get_analyze_steering_effect_per_layer(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      data_path="datasets/lirefs",
+      data_name="mmlu-pro-3000samples.json",
+      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+    )
+    jobs.append(job)
+  
+  # Meta-Llama-3-8B specific jobs
+  if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer":
+    job = get_analyze_steering_effect_per_layer(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      data_path="datasets/lirefs",
+      data_name="mmlu-pro-3000samples.json",
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+    )
+    jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens":
+    job = get_analyze_steering_effect_per_layer(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      data_path="datasets/lirefs",
+      data_name="mmlu-pro-3000samples.json",
+      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
     )
     jobs.append(job)
 

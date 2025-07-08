@@ -52,12 +52,14 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_save_candidate_directions \
+--jobs mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-mmlu_pro_save_candidate_directions
-mmlu_pro_meta-llama-3-8b_save_candidate_directions
+1. mmlu_pro_save_candidate_directions
+2. mmlu_pro_save_candidate_directions_all_tokens
+3. mmlu_pro_meta-llama-3-8b_save_candidate_directions
+4. mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens
 
 ## How to analyze steering effect per layer?
 
@@ -70,9 +72,10 @@ python runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-~~Disclaimer:~~
-~~1. Due to GPU memory constraints with the currently available hardware (2x NVIDIA 3090), the job `mmlu_pro_analyze_steering_effect_per_layer` sets `huginn_num_steps` to 16 instead of the default 32. As a result, layer indices 66 to 129 are not included in the analysis.~~
-I rented 4x 3090 for 2 hours. This is no longer an issue.
+1. mmlu_pro_analyze_steering_effect_per_layer
+2. mmlu_pro_analyze_steering_effect_per_layer_all_tokens
+3. mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer
+4. mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens
 
 ## How to evaluate accuracy reasoning and memorization?
 
@@ -85,6 +88,12 @@ python runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
+1. mmlu_pro_evaluate_accuracy_reasoning_memorizing
+2. mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention
+3. mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129
+4. mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing
+5. mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
+
 ## How to evaluate with lm_eval?
 
 ```bash
@@ -95,6 +104,13 @@ python runner/main.py \
 --jobs mmlu_evaluate_lm_eval_with_intervention_129 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
+
+1. mmlu_pro_evaluate_lm_eval
+2. mmlu_pro_evaluate_lm_eval_with_intervention
+3. mmlu_pro_evaluate_lm_eval_with_intervention_129
+4. mmlu_evaluate_lm_eval
+5. mmlu_evaluate_lm_eval_with_intervention
+6. mmlu_evaluate_lm_eval_with_intervention_129
 
 ## How to test?
 

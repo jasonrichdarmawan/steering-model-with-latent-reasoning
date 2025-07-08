@@ -22,10 +22,11 @@ python experiments/save_candidate_directions/main.py \
 def get_save_candidate_directions(
   workspace_path: str,
   model_name: str,
+  process_hidden_states_mode: ProcessHiddenStatesMode,
 ) -> str:
   huginn_num_steps_flag = "--huginn_num_steps 32" if model_name == "huginn-0125" else ""
 
-  process_hidden_states_mode_arg = f"--process_hidden_states_mode {str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)}"
+  process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}"
 
   return shell.format(
     workspace_path=workspace_path,

@@ -48,6 +48,8 @@ if False:
     '--models_path', f'{WORKSPACE_PATH}/transformers',
     '--model_name', 'huginn-0125',
 
+    '--device_map', 'cuda:0',
+
     '--huginn_num_steps', '32',
 
     '--data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
