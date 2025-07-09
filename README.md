@@ -62,6 +62,9 @@ Jobs:
 - mmlu_pro_meta-llama-3-8b_save_candidate_directions
 - mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens
 
+Note:
+- mmlu_pro_save_candidate_directions_all_tokens with batch size 2 requires 1x 4090 or equivalent
+
 ## How to analyze steering effect per layer?
 
 ```bash
@@ -79,6 +82,9 @@ Jobs:
 - mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer
 - mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens
 
+Note:
+- mmlu_pro_analyze_steering_effect_per_layer and its derivatives with batch size 1 require 4x 3090 or equivalent
+
 ## How to evaluate accuracy reasoning and memorization?
 
 ```bash
@@ -86,7 +92,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention \
+--jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -94,8 +100,13 @@ Tasks:
 - mmlu_pro_evaluate_accuracy_reasoning_memorizing
 - mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention
 - mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1_all_tokens
 - mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing
 - mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
+
+Note:
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing and its derivatives with batch size 1 require 2x 3090 or equivalent
 
 ## How to evaluate with lm_eval?
 
@@ -119,6 +130,9 @@ Jobs:
 - mmlu_evaluate_lm_eval_with_intervention_129
 - mmlu_evaluate_lm_eval_with_intervention_1
 - mmlu_evaluate_lm_eval_with_intervention_1_all_tokens
+
+Note:
+- mmlu_pro_evaluate_lm_eval and its derivatives require 2x 3060 or equivalent
 
 ## How to test?
 

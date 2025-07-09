@@ -49,7 +49,7 @@ def get_evaluate_accuracy_reasoning_memorizing(
 
   process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
 
-  candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt" if with_intervention else ""
+  candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
   
   direction_normalization_mode = DirectionNormalizationMode.UNIT_VECTOR if with_intervention else ""
   direction_normalization_mode_arg = f"--direction_normalization_mode {direction_normalization_mode}" if with_intervention else ""
