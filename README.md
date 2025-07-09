@@ -56,10 +56,11 @@ python runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-1. mmlu_pro_save_candidate_directions
-2. mmlu_pro_save_candidate_directions_all_tokens
-3. mmlu_pro_meta-llama-3-8b_save_candidate_directions
-4. mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens
+Jobs:
+- mmlu_pro_save_candidate_directions
+- mmlu_pro_save_candidate_directions_all_tokens
+- mmlu_pro_meta-llama-3-8b_save_candidate_directions
+- mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens
 
 ## How to analyze steering effect per layer?
 
@@ -72,10 +73,11 @@ python runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-1. mmlu_pro_analyze_steering_effect_per_layer
-2. mmlu_pro_analyze_steering_effect_per_layer_all_tokens
-3. mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer
-4. mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens
+Jobs:
+- mmlu_pro_analyze_steering_effect_per_layer
+- mmlu_pro_analyze_steering_effect_per_layer_all_tokens
+- mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer
+- mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens
 
 ## How to evaluate accuracy reasoning and memorization?
 
@@ -88,11 +90,12 @@ python runner/main.py \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-1. mmlu_pro_evaluate_accuracy_reasoning_memorizing
-2. mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention
-3. mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129
-4. mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing
-5. mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
+Tasks:
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129
+- mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing
+- mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
 
 ## How to evaluate with lm_eval?
 
@@ -101,16 +104,21 @@ WORKSPACE_PATH="/media/tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_evaluate_lm_eval_with_intervention_129 \
+--jobs mmlu_evaluate_lm_eval \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
-1. mmlu_pro_evaluate_lm_eval
-2. mmlu_pro_evaluate_lm_eval_with_intervention
-3. mmlu_pro_evaluate_lm_eval_with_intervention_129
-4. mmlu_evaluate_lm_eval
-5. mmlu_evaluate_lm_eval_with_intervention
-6. mmlu_evaluate_lm_eval_with_intervention_129
+Jobs:
+- mmlu_pro_evaluate_lm_eval
+- mmlu_pro_evaluate_lm_eval_with_intervention
+- mmlu_pro_evaluate_lm_eval_with_intervention_129
+- mmlu_pro_evaluate_lm_eval_with_intervention_1
+- mmlu_pro_evaluate_lm_eval_with_intervention_1_all_tokens
+- mmlu_evaluate_lm_eval
+- mmlu_evaluate_lm_eval_with_intervention
+- mmlu_evaluate_lm_eval_with_intervention_129
+- mmlu_evaluate_lm_eval_with_intervention_1
+- mmlu_evaluate_lm_eval_with_intervention_1_all_tokens
 
 ## How to test?
 

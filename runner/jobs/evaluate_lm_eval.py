@@ -36,6 +36,7 @@ def get_evaluate_lm_eval(
   tasks: str,
   with_intervention: bool,
   layer_indices: list[int] | None = False,
+  process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
 ) -> str:
@@ -43,14 +44,13 @@ def get_evaluate_lm_eval(
 
   with_intervention_flag = "--with_intervention" if with_intervention else ""
   
-  process_hidden_states_mode = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
   process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
   candidate_directions_file_path_arg = f"\"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
 
-  direction_normalization_mode = str(DirectionNormalizationMode.UNIT_VECTOR)
+  direction_normalization_mode = DirectionNormalizationMode.UNIT_VECTOR
   direction_normalization_mode_arg = f"--direction_normalization_mode {direction_normalization_mode}" if with_intervention else ""
 
-  projection_hook_mode = str(ProjectionHookMode.FEATURE_ADDITION)
+  projection_hook_mode = ProjectionHookMode.FEATURE_ADDITION
   projection_hook_mode_arg = f"--projection_hook_mode {projection_hook_mode}" if with_intervention else ""
 
   layer_indices_arg = "--layer_indices " + " ".join(map(str, layer_indices)) if layer_indices else ""

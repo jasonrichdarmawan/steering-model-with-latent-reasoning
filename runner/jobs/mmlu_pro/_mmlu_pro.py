@@ -101,6 +101,7 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro",
       with_intervention=True,
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       layer_indices=[66],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
@@ -113,7 +114,34 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro",
       with_intervention=True,
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       layer_indices=[129],
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+    )
+    jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1":
+    job = get_evaluate_accuracy_reasoning_memorizing(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      test_data_path="datasets/lirefs",
+      test_data_name="mmlu-pro",
+      with_intervention=True,
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      layer_indices=[1],
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+    )
+    jobs.append(job)
+  if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1_all_tokens":
+    job = get_evaluate_accuracy_reasoning_memorizing(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      test_data_path="datasets/lirefs",
+      test_data_name="mmlu-pro",
+      with_intervention=True,
+      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+      layer_indices=[1],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
     )

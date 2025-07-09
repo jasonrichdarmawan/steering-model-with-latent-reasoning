@@ -24,8 +24,6 @@ from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import ProcessHiddenStatesMode
 from utils import enable_reproducibility
-from utils import load_model
-from utils import HuginnWrapper
 from utils import compute_directions
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
@@ -41,7 +39,7 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  WORKSPACE_PATH = "/media/tao/disk4T/jason"
   MODEL_NAME = "huginn-0125"
   PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
   DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
@@ -60,7 +58,7 @@ if False:
     '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
     '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
     '--projection_hook_mode', PROJECTION_HOOK_MODE,
-    '--layer_indices', '129',
+    '--layer_indices', '1',
     # '--with_hidden_states_pre_hook',
     '--with_hidden_states_post_hook',
     '--scale', '1.0',
@@ -110,11 +108,6 @@ match args["model_name"]:
     """
     # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
-    # model = load_model(
-    #   models_path=args["models_path"],
-    #   model_name=args["model_name"],
-    #   device_map=device_map,
-    # )
     model = HFLM(
       pretrained=join(
         args["models_path"], 
@@ -125,23 +118,6 @@ match args["model_name"]:
       mean_recurrence=args["huginn_mean_recurrence"],
       dtype=torch.bfloat16,
     )
-
-    # model = HuginnWrapper(
-    #   pretrained=join(
-    #     args["models_path"], 
-    #     args["model_name"]
-    #   ),
-    #   backend="causal",
-    #   device_map=device_map,
-    #   batch_size=args["batch_size"],
-    #   trust_remote_code=False,
-    #   dtype=torch.bfloat16,
-    #   criterion="entropy-diff",
-    #   exit_threshold="auto",
-    #   lookup_strategy="full",
-    #   continuous_compute=False,
-    #   latent_dampening=False,
-    # )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 

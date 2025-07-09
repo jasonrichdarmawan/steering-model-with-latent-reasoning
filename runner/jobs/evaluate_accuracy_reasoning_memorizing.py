@@ -35,6 +35,7 @@ def get_evaluate_accuracy_reasoning_memorizing(
   test_data_path: str,
   test_data_name: str,
   with_intervention: bool,
+  process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
   layer_indices: list[int] | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
@@ -46,7 +47,6 @@ def get_evaluate_accuracy_reasoning_memorizing(
 
   with_intervention_flag = "--with_intervention" if with_intervention else ""
 
-  process_hidden_states_mode = ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN if with_intervention else ""
   process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
 
   candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt" if with_intervention else ""
