@@ -117,6 +117,7 @@ match args["model_name"]:
       device_map=device_map,
       mean_recurrence=args["huginn_mean_recurrence"],
       dtype=torch.bfloat16,
+      batch_size=args["batch_size"],
     )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")

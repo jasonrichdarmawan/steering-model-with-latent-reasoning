@@ -130,7 +130,7 @@ Jobs:
 - mmlu_evaluate_lm_eval_with_intervention_1_all_tokens
 
 Note:
-- mmlu_pro_evaluate_lm_eval and its derivatives require 2x 3060 or equivalent
+- mmlu_pro_evaluate_lm_eval and its derivatives with batch size 4 require 2x 3060 or equivalent
 
 ## How to test?
 
