@@ -48,11 +48,11 @@ sub-job, then see the `experiments/runner/jobs/[job_name]/_[job_name].py` file
 ## How to save candidate directions?
 
 ```shell
-WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
+WORKSPACE_PATH="/root/autodl-fs"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens \
+--jobs mmlu_pro_save_candidate_directions_all_tokens \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
