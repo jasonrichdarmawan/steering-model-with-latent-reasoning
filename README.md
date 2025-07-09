@@ -123,8 +123,6 @@ Jobs:
 - mmlu_pro_evaluate_lm_eval
 - mmlu_pro_evaluate_lm_eval_with_intervention
 - mmlu_pro_evaluate_lm_eval_with_intervention_129
-- mmlu_pro_evaluate_lm_eval_with_intervention_1
-- mmlu_pro_evaluate_lm_eval_with_intervention_1_all_tokens
 - mmlu_evaluate_lm_eval
 - mmlu_evaluate_lm_eval_with_intervention
 - mmlu_evaluate_lm_eval_with_intervention_129
