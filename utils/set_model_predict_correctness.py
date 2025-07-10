@@ -1,5 +1,4 @@
 import re
-import warnings
 from typing import NamedTuple
 
 class NoAnswerWarning(NamedTuple):
@@ -46,7 +45,6 @@ def set_model_predict_correctness(
             expected_answer=entry['answer']
           )
           no_answers.append(no_answer)
-          warnings.warn(str(no_answer))
 
         if entry["answer"] == prediction:
           entry["model_predict_correctness"] = True

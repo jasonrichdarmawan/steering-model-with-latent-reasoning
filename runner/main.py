@@ -19,7 +19,7 @@ if False:
   )
 
 from runner_utils import parse_args
-from runner_utils import set_up_jobs
+from runner_utils import set_up_experiments
 
 from typing import TypedDict
 from datetime import datetime
@@ -38,6 +38,7 @@ if False:
     '--workspace_path', root_path,
     '--jobs', 'mmlu_pro_save_candidate_directions', 'mmlu_pro_meta-llama-3-8b_save_candidate_directions',
     # '--output_path', f'{root_path}/experiments/runner',
+    # "--shutdown_after_experiment",
   ]
 
 args = parse_args()
@@ -48,16 +49,16 @@ for key, value in args.items():
 
 # %%
 
-EXPERIMENT_JOBS = set_up_jobs(
+experiments = set_up_experiments(
   workspace_path=args['workspace_path'],
   jobs=args["jobs"],
 )
 print(f"Set up jobs for experiments:")
 print('#' * 60)
-for i, job in enumerate(EXPERIMENT_JOBS):
+for i, commands in enumerate(experiments):
   print(f"Experiment {i+1}:")
-  for j, cmd in enumerate(job):
-    print(f"Command {j+1}:\n{cmd}")
+  for j, command in enumerate(commands):
+    print(f"Command {j+1}:\n{command}")
 
 # %%
 
@@ -104,17 +105,17 @@ else:
 
 # %%
 
-for i, job in enumerate(EXPERIMENT_JOBS):
+for i, commands in enumerate(experiments):
   print(f"\n\nExperiment {i+1}")
   print("#" * 60)
   failed = False
   failed_at = None
-  for j, cmd in enumerate(job):
-    print(f"\nRunning command {j+1}/{len(job)}.")
+  for j, command in enumerate(commands):
+    print(f"\nRunning command {j+1}/{len(commands)}.")
     print("#" * 60)
-    print(f"Command:\n{cmd}")
+    print(f"Command:\n{command}")
     process = subprocess.Popen(
-      cmd,
+      command,
       cwd=project_root,
       shell=True,
       stdout=subprocess.PIPE,
@@ -130,7 +131,7 @@ for i, job in enumerate(EXPERIMENT_JOBS):
     process.wait()
     returncode = process.returncode
     if returncode != 0:
-      print(f"{'#' * 30} Command {j+1}/{len(job)} failed with return code {returncode}. Skipping to the next experiment. {'#' * 30}")
+      print(f"{'#' * 30} Command {j+1}/{len(commands)} failed with return code {returncode}. Skipping to the next experiment. {'#' * 30}")
       failed = True
       failed_at = j + 1
       break
@@ -166,5 +167,11 @@ if args['output_path']:
   sys.stdout = original_stdout
   sys.stderr = original_stderr
   f.close()
+
+# %%
+
+if args["shutdown_after_experiment"]:
+  print("Shutting down the system after experiments.")
+  subprocess.run(["/usr/bin/shutdown"], check=True)
 
 # %%

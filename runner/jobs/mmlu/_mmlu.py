@@ -5,18 +5,18 @@ def get_mmlu(
   workspace_path: str,
   job: str,
 ) -> list[str]:
-  jobs = []
+  commands = []
 
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval":
-    job = get_evaluate_lm_eval(
+    command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=False,
     )
-    jobs.append(job)
+    commands.append(command)
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention":
-    job = get_evaluate_lm_eval(
+    command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
@@ -26,9 +26,9 @@ def get_mmlu(
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
     )
-    jobs.append(job)
+    commands.append(command)
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_129":
-    job = get_evaluate_lm_eval(
+    command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
@@ -38,9 +38,9 @@ def get_mmlu(
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
     )
-    jobs.append(job)
+    commands.append(command)
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_1":
-    job = get_evaluate_lm_eval(
+    command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
@@ -50,9 +50,9 @@ def get_mmlu(
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
     )
-    jobs.append(job)
+    commands.append(command)
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_1_all_tokens":
-    job = get_evaluate_lm_eval(
+    command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
@@ -62,8 +62,9 @@ def get_mmlu(
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
     )
+    commands.append(command)
   
-  if len(jobs) == 0:
+  if len(commands) == 0:
     raise ValueError(f"Job '{job}' not found in MMLU jobs.")
 
-  return jobs
+  return commands
