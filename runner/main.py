@@ -172,6 +172,6 @@ if args['output_path']:
 
 if args["shutdown_after_experiment"]:
   print("Shutting down the system after experiments.")
-  subprocess.run(["/usr/bin/shutdown"], check=True)
+  subprocess.run(["bash", "/usr/bin/shutdown"], check=True)
 
 # %%

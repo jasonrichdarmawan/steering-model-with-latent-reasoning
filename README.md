@@ -111,12 +111,13 @@ Note:
 ## How to evaluate with lm_eval?
 
 ```bash
-WORKSPACE_PATH="/media/tao/disk4T/jason"
+WORKSPACE_PATH="/root/autodl-fs"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_evaluate_lm_eval \
---output_path "$WORKSPACE_PATH/experiments/runner"
+--jobs mmlu_evaluate_lm_eval_with_intervention_1_all_tokens_scale_with_overall_magnitude \
+--output_path "$WORKSPACE_PATH/experiments/runner" \
+--shutdown_after_experiment
 ```
 
 Jobs:
@@ -128,6 +129,7 @@ Jobs:
 - mmlu_evaluate_lm_eval_with_intervention_129
 - mmlu_evaluate_lm_eval_with_intervention_1
 - mmlu_evaluate_lm_eval_with_intervention_1_all_tokens
+- mmlu_evaluate_lm_eval_with_intervention_1_all_tokens_scale_with_overall_magnitude
 
 Note:
 - mmlu_pro_evaluate_lm_eval and its derivatives with batch size 4 require 2x 3060 or equivalent
