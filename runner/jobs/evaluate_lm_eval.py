@@ -37,8 +37,11 @@ def get_evaluate_lm_eval(
   with_intervention: bool,
   layer_indices: list[int] | None = False,
   process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
+  direction_normalization_mode: DirectionNormalizationMode | None = None,
+  projection_hook_mode: ProjectionHookMode | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
+  scale: float | None = None,
 ) -> str:
   huginn_mean_recurrence_arg = "--huginn_mean_recurrence 32" if model_name == "huginn-0125" else ""
 
@@ -47,17 +50,15 @@ def get_evaluate_lm_eval(
   process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
   candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
 
-  direction_normalization_mode = DirectionNormalizationMode.UNIT_VECTOR
   direction_normalization_mode_arg = f"--direction_normalization_mode {direction_normalization_mode}" if with_intervention else ""
 
-  projection_hook_mode = ProjectionHookMode.FEATURE_ADDITION
   projection_hook_mode_arg = f"--projection_hook_mode {projection_hook_mode}" if with_intervention else ""
 
   layer_indices_arg = "--layer_indices " + " ".join(map(str, layer_indices)) if layer_indices else ""
 
   with_hidden_states_pre_hook_flag = "--with_hidden_states_pre_hook" if with_hidden_states_pre_hook else ""
   with_hidden_states_post_hook_flag = "--with_hidden_states_post_hook" if with_hidden_states_post_hook else ""
-  scale_arg = "--scale 1.0" if with_intervention else ""
+  scale_arg = f"--scale {scale}" if with_intervention else ""
 
   return shell.format(
     workspace_path=workspace_path,

@@ -36,9 +36,12 @@ def get_evaluate_accuracy_reasoning_memorizing(
   test_data_name: str,
   with_intervention: bool,
   process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
+  direction_normalization_mode: DirectionNormalizationMode | None = None,
+  projection_hook_mode: ProjectionHookMode | None = None,
   layer_indices: list[int] | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
+  scale: float | None = None,
 ) -> str:
   huginn_num_steps = "--huginn_num_steps 32" if model_name == "huginn-0125" else ""
 
@@ -51,16 +54,14 @@ def get_evaluate_accuracy_reasoning_memorizing(
 
   candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
   
-  direction_normalization_mode = DirectionNormalizationMode.UNIT_VECTOR if with_intervention else ""
   direction_normalization_mode_arg = f"--direction_normalization_mode {direction_normalization_mode}" if with_intervention else ""
   
-  projection_hook_mode = ProjectionHookMode.FEATURE_ADDITION if with_intervention else ""
   projection_hook_mode_arg = f"--projection_hook_mode {projection_hook_mode}" if with_intervention else ""
   
   layer_indices_arg = f"--layer_indices {' '.join(map(str, layer_indices))}" if layer_indices else ""
   with_hidden_states_pre_hook_flag = "--with_hidden_states_pre_hook" if with_hidden_states_pre_hook else ""
   with_hidden_states_post_hook_flag = "--with_hidden_states_post_hook" if with_hidden_states_post_hook else ""
-  scale_arg = "--scale 1.0" if with_intervention else ""
+  scale_arg = f"--scale {scale}" if with_intervention else ""
 
   return shell.format(
     workspace_path=workspace_path,

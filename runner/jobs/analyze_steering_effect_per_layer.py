@@ -27,10 +27,10 @@ def get_analyze_steering_effect_per_layer(
   data_path: str,
   data_name: str,
   process_hidden_states_mode: ProcessHiddenStatesMode,
+  direction_normalization_mode: DirectionNormalizationMode,
 ) -> str:
   huginn_num_steps_flag = "--huginn_num_steps 32" if model_name == "huginn-0125" else ""
 
-  direction_normalization_mode = DirectionNormalizationMode.UNIT_VECTOR
   direction_normalization_mode_flag = f"--direction_normalization_mode {direction_normalization_mode}"
 
   data_path_arg = f"--data_path \"$WORKSPACE_PATH/{data_path}\""

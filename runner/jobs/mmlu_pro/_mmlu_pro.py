@@ -1,4 +1,6 @@
 from utils import ProcessHiddenStatesMode
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
 
 from jobs import get_save_candidate_directions
 from jobs import get_analyze_steering_effect_per_layer
@@ -52,6 +54,7 @@ def get_mmlu_pro(
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_analyze_steering_effect_per_layer_all_tokens":
@@ -61,6 +64,7 @@ def get_mmlu_pro(
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
       process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
   
@@ -72,6 +76,7 @@ def get_mmlu_pro(
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens":
@@ -81,6 +86,7 @@ def get_mmlu_pro(
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
       process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
 
@@ -102,9 +108,12 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[66],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_129":
@@ -115,9 +124,12 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[129],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1":
@@ -128,9 +140,12 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[1],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1_all_tokens":
@@ -141,9 +156,12 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[1],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
   
@@ -164,9 +182,13 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro",
       with_intervention=True,
+      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[21],
       with_hidden_states_pre_hook=True,
       with_hidden_states_post_hook=False,
+      scale=1.0,
     )
     commands.append(command)
 
@@ -185,9 +207,12 @@ def get_mmlu_pro(
       tasks="mmlu_pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[66],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
   if job == "mmlu_pro" or job == "mmlu_pro_evaluate_lm_eval_with_intervention_129":
@@ -197,9 +222,12 @@ def get_mmlu_pro(
       tasks="mmlu_pro",
       with_intervention=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       layer_indices=[129],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+      scale=1.0,
     )
     commands.append(command)
 
