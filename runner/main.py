@@ -24,6 +24,7 @@ from runner_utils import set_up_experiments
 from typing import TypedDict
 from datetime import datetime
 from typing import Optional
+from collections import defaultdict
 import os
 import subprocess
 import sys
@@ -78,12 +79,21 @@ class Tee:
     for f in self.files:
       f.flush()
 
-class ExperimentResult(TypedDict):
-  experiment_number: int
-  status: int  # 1 for success, 0 for failure
-  failed_at: Optional[int]  # None if successful, otherwise the command number that failed
+class CommandResult(TypedDict):
+  command: str
+  returncode: int
+  elapsed_time: float
 
-experiment_results: list[ExperimentResult] = []
+class ExperimentResult(TypedDict):
+  status: int # 0 for success
+  failed_at: Optional[int]
+  command_results: list[CommandResult] = []
+
+experiment_results: defaultdict[int, ExperimentResult] = defaultdict(lambda: {
+  "status": 0,
+  "failed_at": None,
+  "command_results": []
+})
 
 if args['output_path']:
   now = datetime.now()
@@ -111,6 +121,8 @@ for i, commands in enumerate(experiments):
   failed = False
   failed_at = None
   for j, command in enumerate(commands):
+    command_start_time = datetime.now()
+
     print(f"\nRunning command {j+1}/{len(commands)}.")
     print("#" * 60)
     print(f"Command:\n{command}")
@@ -129,36 +141,45 @@ for i, commands in enumerate(experiments):
       print(line, end='')
 
     process.wait()
+
     returncode = process.returncode
+
+    command_end_time = datetime.now()
+    elapsed_time = (command_end_time - command_start_time).total_seconds()
+
+    print(f"\nCommand {j+1}/{len(commands)} completed with return code {returncode}. Elapsed time: {elapsed_time:.2f} seconds.")
+    
+    command_result = CommandResult(
+      command=command,
+      returncode=returncode,
+      elapsed_time=elapsed_time,
+    )
+    experiment_results[i]["command_results"].append(command_result)
+    
     if returncode != 0:
       print(f"{'#' * 30} Command {j+1}/{len(commands)} failed with return code {returncode}. Skipping to the next experiment. {'#' * 30}")
       failed = True
       failed_at = j + 1
+
+      experiment_results[i]["status"] = returncode
+      experiment_results[i]["failed_at"] = failed_at
       break
+
   if not failed:
     print(f"{'#' * 30} Experiment {i+1} completed successfully. {'#' * 30}")
-    experiment_results.append({
-      "experiment_number": i + 1,
-      "status": 1,
-      "failed_at": None
-    })
   else:
     print(f"{'#' * 30} Experiment {i+1} failed at command {failed_at}. {'#' * 30}")
-    experiment_results.append({
-      "experiment_number": i + 1,
-      "status": 0,
-      "failed_at": failed_at
-    })
 
 # %%
 
 print("\n\nExperiment Results Summary")
 print("#" * 60)
-for result in experiment_results:
-  if result["status"] == 1:
-    print(f"Experiment {result['experiment_number']}: Success")
-  else:
-    print(f"Experiment {result['experiment_number']}: Failed at command {result['failed_at']}")
+for index, result in experiment_results.items():
+  if result["status"] != 0:
+    print(f"Experiment {index}: Failed at command {result['failed_at']}")
+    continue
+
+  print(f"Experiment {index}: Success")
 
 # %%
 
@@ -171,6 +192,17 @@ if args['output_path']:
 # %%
 
 if args["shutdown_after_experiment"]:
+  now = datetime.now()
+  # Do not shutdown if the elapsed time is less than 5 minutes
+  total_elapsed_time = sum(
+    command_result["elapsed_time"]
+    for experiment in experiment_results.values()
+    for command_result in experiment["command_results"]
+  )
+  if total_elapsed_time < 15 * 60:
+    print("Total elapsed time is less than 15 minutes. Not shutting down the system.")
+    sys.exit(0)
+
   print("Shutting down the system after experiments.")
   subprocess.run(["bash", "/usr/bin/shutdown"], check=True)
 
