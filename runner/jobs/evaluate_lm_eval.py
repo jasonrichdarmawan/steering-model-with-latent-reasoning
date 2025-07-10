@@ -25,7 +25,7 @@ python experiments/evaluate_lm_eval/main.py \
 \
 --tasks {tasks} \
 --num_fewshot 0 \
---batch_size 1 \
+--batch_size auto \
 \
 --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/{model_name}.json"
 """
