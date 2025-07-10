@@ -237,11 +237,6 @@ match model.config.model_type:
 
 # %%
 
-print("Effects per layer:")
-print(effects)
-
-# %%
-
 print("Layers by the highest effects:")
 top_effects = sorted(
   effects.items(),
