@@ -1,4 +1,6 @@
 from utils.projection_hook import ProjectionHookMode
+from utils.projection_hook import DirectionNormalizationMode
+from utils.projection_hook import compute_projection
 
 from jaxtyping import Float
 from torch import Tensor
@@ -6,26 +8,46 @@ from torch import Tensor
 class ProjectionPostHookHuginn:
   def __init__(
     self,
-    mode: ProjectionHookMode,
+    steering_mode: ProjectionHookMode,
+    direction_normalization_mode: DirectionNormalizationMode,
     selected_depth_indices: list[int],
-    directions: dict[int, Float[Tensor, "n_embd"]],
-    scale: float = 1.0,
+    feature_directions: dict[int, Float[Tensor, "n_embd"]],
+    overall_direction_magnitude: dict[int, Float[Tensor, "n_embd"]] | None = None,
+    scale: float | None = None,
   ):
     super().__init__()
-    self.mode = mode
+    self.steering_mode = steering_mode
+    self.direction_normalization_mode = direction_normalization_mode
     self.selected_depth_indices = selected_depth_indices
-    self.candidate_directions = directions
+    self.feature_directions = feature_directions
+    self.feature_directions_normalized = {
+      depth_index: direction / direction.norm(dim=-1)
+      for depth_index, direction in feature_directions.items()
+    }
+    self.overall_direction_magnitude = overall_direction_magnitude
     self.scale = scale
 
-    match mode:
+    match steering_mode:
+      case ProjectionHookMode.FEATURE_AMPLIFICATION:
+        if scale:
+          raise ValueError("Scale should not be set for feature amplification mode.")
       case ProjectionHookMode.FEATURE_ADDITION:
         if scale is None:
-          self.scale = 1.0
+          raise ValueError("Scale must be set for feature addition mode.")
       case ProjectionHookMode.FEATURE_ABLATION:
         if scale:
           raise ValueError("Scale should not be set for ablation mode.")
       case _:
-        raise ValueError(f"Unsupported mode: {mode}")
+        raise ValueError(f"Unsupported mode: {steering_mode}")
+  
+    match direction_normalization_mode:
+      case DirectionNormalizationMode.UNIT_VECTOR:
+        pass
+      case DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
+        if self.scale:
+          raise ValueError("Scale should not be set for scale with overall magnitude normalization mode.")
+      case _:
+        raise ValueError(f"Unsupported direction normalization mode: {direction_normalization_mode}")
   
   def __call__(
     self,
@@ -39,11 +61,27 @@ class ProjectionPostHookHuginn:
       (depth_index in module.depth_indices)
       and depth_index in self.selected_depth_indices
     ):
-      match self.mode:
+      match self.steering_mode:
+        case ProjectionHookMode.FEATURE_AMPLIFICATION:
+          feature_direction_normalized = self.feature_directions_normalized[depth_index]
+          overall_direction_magnitude = self.overall_direction_magnitude[depth_index] if self.overall_direction_magnitude else None
+          projection = compute_projection(
+            data=output[0],
+            direction_normalization_mode=self.direction_normalization_mode,
+            feature_direction_normalized=feature_direction_normalized,
+            overall_direction_magnitude=overall_direction_magnitude,
+          )
+          output[0][:, :, :] = output[0] + projection
         case ProjectionHookMode.FEATURE_ADDITION:
-          direction = self.candidate_directions[depth_index]
-          output[0][:, :, :] = output[0] + (self.scale * direction)
+          feature_direction_normalized = self.feature_directions_normalized[depth_index]
+          output[0][:, :, :] = output[0] + (self.scale * feature_direction_normalized)
         case ProjectionHookMode.FEATURE_ABLATION:
-          direction = self.candidate_directions[depth_index]
-          projection = (output[0] @ direction).unsqueeze(-1) * direction
+          feature_direction_normalized = self.feature_directions_normalized[depth_index]
+          overall_direction_magnitude = self.overall_direction_magnitude[depth_index] if self.overall_direction_magnitude else None
+          projection = compute_projection(
+            data=output[0],
+            direction_normalization_mode=self.direction_normalization_mode,
+            feature_direction_normalized=feature_direction_normalized,
+            overall_direction_magnitude=overall_direction_magnitude,
+          )
           output[0][:, :, :] = output[0] - projection

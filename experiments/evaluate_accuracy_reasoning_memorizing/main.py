@@ -182,6 +182,8 @@ entries_batched = [
 
 # %%
 
+feature_directions = None
+overall_directions_magnitude = None
 if args['with_intervention']:
   print("Computing directions for the model.")
   candidate_directions = torch.load(
@@ -189,14 +191,19 @@ if args['with_intervention']:
     map_location='cpu',
     weights_only=False,
   )
-  directions = compute_directions(
+  feature_directions = compute_directions(
     model=model,
     candidate_directions=candidate_directions,
     positive_label="reasoning",
     negative_label="memorizing",
-    overall_label="overall",
-    normalization_mode=args['direction_normalization_mode'],
   )
+
+  if args['direction_normalization_mode'] == DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
+    overall_directions_magnitude = {
+      layer_index: candidate_direction.norm(dim=-1)
+      for layer_index, candidate_direction in candidate_directions["overall"]["mean"].items()
+    }
+    print("Using overall directions magnitude for normalization.")
 
   del candidate_directions
 
@@ -207,10 +214,10 @@ if args['with_intervention']:
   match model.config.model_type:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
-        mode=args['projection_hook_mode'],
+        steering_mode=args['projection_hook_mode'],
+        direction_normalization_mode=args['direction_normalization_mode'],
         layer_indices=args['layer_indices'],
-        directions=directions,
-        hidden_states_hooks={
+        hidden_states_hooks_config={
           "pre_hook": args['with_hidden_states_pre_hook'],
           "post_hook": args['with_hidden_states_post_hook'],
         },
@@ -218,18 +225,18 @@ if args['with_intervention']:
       )
     case "llama":
       projection_hook_config = ProjectionHookConfigLiReFs(
-        mode=args['projection_hook_mode'],
+        steering_mode=args['projection_hook_mode'],
+        direction_normalization_mode=args['direction_normalization_mode'],
         layer_indices=args['layer_indices'],
-        directions=directions,
-        hidden_states_hooks={
+        hidden_states_hooks_config={
           "pre_hook": args['with_hidden_states_pre_hook'],
           "post_hook": args['with_hidden_states_post_hook'], # Not implemented
         },
-        attention_hooks={
+        attention_hooks_config={
           "pre_hook": False, # Not implemented
           "post_hook": True,
         },
-        mlp_hooks={
+        mlp_hooks_config={
           "pre_hook": False, # Not implemented
           "post_hook": True,
         },
@@ -239,7 +246,7 @@ if args['with_intervention']:
       raise ValueError(f"Unsupported model type: {model.config.model_type}")
   hooks = set_activations_hooks(
     model=model,
-    directions=directions,
+    feature_directions=feature_directions,
     config=projection_hook_config,
   )
 else:

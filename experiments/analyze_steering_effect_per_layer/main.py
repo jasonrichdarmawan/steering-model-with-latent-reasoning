@@ -123,14 +123,16 @@ candidate_directions = torch.load(
   map_location='cpu',
   weights_only=False,
 )
-directions = compute_directions(
+feature_directions = compute_directions(
   model=model,
   candidate_directions=candidate_directions,
   positive_label="reasoning",
   negative_label="memorizing",
-  overall_label="overall",
-  normalization_mode=args['direction_normalization_mode'],
 )
+feature_directions_normalized = {
+  layer_index: direction / direction.norm(dim=-1, keepdim=True)
+  for layer_index, direction in feature_directions.items()
+}
 
 del candidate_directions
 
@@ -215,11 +217,11 @@ match model.config.model_type:
       loss.backward()
 
       for layer_index in list(
-        gradients.keys() & directions.keys()
+        gradients.keys() & feature_directions_normalized.keys()
       ):
         effect = (
           gradients[layer_index]
-          @ directions[layer_index]
+          @ feature_directions_normalized[layer_index]
         ).mean().abs()
         if effects.get(layer_index) is None:
           effects[layer_index] = []
@@ -381,7 +383,7 @@ def process(
 match model.config.model_type:
   case "huginn_raven":
     cosine_similarities = process(
-      x1=directions,
+      x1=feature_directions,
       x2=model.transformer.wte.weight.data,
       x2_name="embedding layer weight",
       fig_file_path=os.path.join(

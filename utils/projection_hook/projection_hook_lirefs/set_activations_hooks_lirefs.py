@@ -10,8 +10,9 @@ from torch.utils.hooks import RemovableHandle
 
 def set_activations_hooks_lirefs(
   model: nn.Module,
-  directions: dict[int, Float[Tensor, "n_embd"]],
+  feature_directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfigLiReFs,
+  overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
   hooks: list[RemovableHandle] | None = None,
 ) -> list[RemovableHandle]:
   """
@@ -30,15 +31,18 @@ def set_activations_hooks_lirefs(
 
   for layer_index in config["layer_indices"]:
 
-    direction = directions[layer_index]
+    feature_direction = feature_directions[layer_index]
+    overall_direction_magnitude = overall_directions_magnitude[layer_index] if overall_directions_magnitude else None
     scale = config["scale"]
 
     # hidden_states
-    if config["hidden_states_hooks"]:
-      if config["hidden_states_hooks"]["pre_hook"]:
+    if config["hidden_states_hooks_config"]:
+      if config["hidden_states_hooks_config"]["pre_hook"]:
         pre_hook = ProjectionPreHookLiReFs(
-          mode=config["mode"],
-          direction=direction,
+          steering_mode=config["steering_mode"],
+          direction_normalization_mode=config["direction_normalization_mode"],
+          feature_direction=feature_direction,
+          overall_direction_magnitude=overall_direction_magnitude,
           scale=scale,
         )
         hook = hidden_states[layer_index].register_forward_pre_hook(
@@ -47,23 +51,25 @@ def set_activations_hooks_lirefs(
         hooks.append(hook)
         print(f"Registering hidden_states pre-hook for {model.config.model_type} model at layer index {layer_index}")
 
-      if config["hidden_states_hooks"]["post_hook"]:
+      if config["hidden_states_hooks_config"]["post_hook"]:
         raise NotImplementedError(
           f"Post-hook for hidden states is not implemented for {model.config.model_type} model."
         )
     
     # attention
-    if config["attention_hooks"]:
-      if config["attention_hooks"]["pre_hook"]:
+    if config["attention_hooks_config"]:
+      if config["attention_hooks_config"]["pre_hook"]:
         raise NotImplementedError(
           f"Pre-hook for attention is not implemented for {model.config.model_type} model."
         )
 
-      if config["attention_hooks"]["post_hook"]:
+      if config["attention_hooks_config"]["post_hook"]:
         post_hook = ProjectionPostHookLiReFs(
-          type=ProjectionPostHookLiReFsModuleType.ATTENTION,
-          mode=config["mode"],
-          direction=direction,
+          hook_type=ProjectionPostHookLiReFsModuleType.ATTENTION,
+          steering_mode=config["steering_mode"],
+          direction_normalization_mode=config["direction_normalization_mode"],
+          feature_direction=feature_direction,
+          overall_direction_magnitude=overall_direction_magnitude,
           scale=scale,
         )
         hook = getattr(
@@ -76,17 +82,19 @@ def set_activations_hooks_lirefs(
         print(f"Registering attention post-hook for {model.config.model_type} model at layer index {layer_index}")
 
     # mlp
-    if config["mlp_hooks"]:
-      if config["mlp_hooks"]["pre_hook"]:
+    if config["mlp_hooks_config"]:
+      if config["mlp_hooks_config"]["pre_hook"]:
         raise NotImplementedError(
           f"Pre-hook for MLP is not implemented for {model.config.model_type} model."
         )
 
-      if config["mlp_hooks"]["post_hook"]:
+      if config["mlp_hooks_config"]["post_hook"]:
         post_hook = ProjectionPostHookLiReFs(
-          type=ProjectionPostHookLiReFsModuleType.MLP,
-          mode=config["mode"],
-          direction=direction,
+          hook_type=ProjectionPostHookLiReFsModuleType.MLP,
+          steering_mode=config["steering_mode"],
+          direction_normalization_mode=config["direction_normalization_mode"],
+          feature_direction=feature_direction,
+          overall_direction_magnitude=overall_direction_magnitude,
           scale=scale,
         )
         hook = getattr(

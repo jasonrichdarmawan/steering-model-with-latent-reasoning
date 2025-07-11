@@ -1,5 +1,7 @@
 from .hook_config import *
 from .projection_hook_mode import *
+from .direction_normalization_mode import *
+from .compute_projection import *
 from .projection_hook_config import *
 from .projection_hook_huginn import *
 from .projection_hook_lirefs import *

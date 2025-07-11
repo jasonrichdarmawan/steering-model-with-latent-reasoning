@@ -42,8 +42,8 @@ if False:
   WORKSPACE_PATH = "/media/tao/disk4T/jason"
   MODEL_NAME = "huginn-0125"
   PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
-  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
-  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_ADDITION)
+  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE)
+  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_AMPLIFICATION)
   sys.argv = [
     'main.py',
     '--data_path', f'{WORKSPACE_PATH}/datasets',
@@ -58,10 +58,10 @@ if False:
     '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
     '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
     '--projection_hook_mode', PROJECTION_HOOK_MODE,
-    '--layer_indices', '1',
+    '--layer_indices', '66',
     # '--with_hidden_states_pre_hook',
     '--with_hidden_states_post_hook',
-    '--scale', '1.0',
+    # '--scale', '1.0',
 
     '--tasks', 'mmlu',
     '--num_fewshot', '0',
@@ -124,6 +124,8 @@ match args["model_name"]:
 
 # %%
 
+feature_directions = None
+overall_directions_magnitude = None
 if args["with_intervention"]:
   print(f"Computing directions from file: {args['candidate_directions_file_path']}")
   candidate_directions = torch.load(
@@ -132,14 +134,19 @@ if args["with_intervention"]:
     weights_only=False,
   )
 
-  directions = compute_directions(
+  feature_directions = compute_directions(
     model=model.model,
     candidate_directions=candidate_directions,
     positive_label="reasoning",
     negative_label="memorizing",
-    overall_label="overall",
-    normalization_mode=args['direction_normalization_mode'],
   )
+
+  if args['direction_normalization_mode'] == DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
+    overall_directions_magnitude = {
+      layer_index: candidate_direction.norm(dim=-1)
+      for layer_index, candidate_direction in candidate_directions["overall"]["mean"].items()
+    }
+    print("Using overall directions magnitude for normalization.")
 
   del candidate_directions
 else:
@@ -153,10 +160,10 @@ if args['with_intervention']:
   match model.config.model_type:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
-        mode=args['projection_hook_mode'],
+        steering_mode=args['projection_hook_mode'],
+        direction_normalization_mode=args['direction_normalization_mode'],
         layer_indices=args['layer_indices'],
-        directions=directions,
-        hidden_states_hooks={
+        hidden_states_hooks_config={
           "pre_hook": args['with_hidden_states_pre_hook'],
           "post_hook": args['with_hidden_states_post_hook'],
         },
@@ -167,8 +174,9 @@ if args['with_intervention']:
 
   hooks = set_activations_hooks(
     model=model.model,
-    directions=directions,
+    feature_directions=feature_directions,
     config=projection_hook_config,
+    overall_directions_magnitude=overall_directions_magnitude,
   )
 else:
   print("No intervention hooks set up, proceeding without them.")

@@ -1,4 +1,6 @@
 from utils.projection_hook import ProjectionHookMode
+from utils.projection_hook import DirectionNormalizationMode
+from utils.projection_hook import compute_projection
 
 from jaxtyping import Float
 from torch import Tensor
@@ -12,33 +14,46 @@ class ProjectionPostHookLiReFsModuleType(Enum):
 class ProjectionPostHookLiReFs:
   def __init__(
     self,
-    type: ProjectionPostHookLiReFsModuleType,
-    mode: ProjectionHookMode,
-    direction: Float[Tensor, "n_embd"],
+    hook_type: ProjectionPostHookLiReFsModuleType,
+    steering_mode: ProjectionHookMode,
+    direction_normalization_mode: DirectionNormalizationMode,
+    feature_direction: Float[Tensor, "n_embd"],
+    overall_direction_magnitude: Float[Tensor, ""] | None = None,
     scale: float | None = None,
   ):
     """
     direction must be a unit vector, meaning its magnitude is 1
     """
     super().__init__()
-    self.type = type
-    self.mode = mode
-    self.direction = direction
+    self.hook_type = hook_type
+    self.direction_normalization_mode = direction_normalization_mode
+    self.steering_mode = steering_mode
+    self.feature_direction = feature_direction
+    self.feature_direction_normalized = self.feature_direction / self.feature_direction.norm(dim=-1)
+    self.overall_direction_magnitude = overall_direction_magnitude
     self.scale = scale
 
-    match mode:
+    match steering_mode:
+      case ProjectionHookMode.FEATURE_AMPLIFICATION:
+        if scale:
+          raise ValueError("Scale should not be set for feature amplification mode.")
       case ProjectionHookMode.FEATURE_ADDITION:
         if scale is None:
-          self.scale = 1.0
+          raise ValueError("Scale must be set for feature addition mode.")
       case ProjectionHookMode.FEATURE_ABLATION:
         if scale:
           raise ValueError("Scale should not be set for feature addition or ablation mode.")
-      case ProjectionHookMode.LIREFS_SOURCE_CODE:
-        if scale is None:
-          self.scale = 0.1
       case _:
-        raise ValueError(f"Unsupported mode: {mode}")
-
+        raise ValueError(f"Unsupported mode: {steering_mode}")
+      
+    match direction_normalization_mode:
+      case DirectionNormalizationMode.UNIT_VECTOR:
+        pass
+      case DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
+        if self.scale:
+          raise ValueError("Scale should not be set for scale with overall magnitude normalization mode.")
+        if self.overall_direction_magnitude is None:
+          raise ValueError("Overall direction magnitude must be set for scale with overall magnitude normalization mode.")
   
   def __call__(
     self,
@@ -46,33 +61,49 @@ class ProjectionPostHookLiReFs:
     input,
     output: tuple[Tensor, ...]
   ):
-    match self.type:
+    match self.hook_type:
       case ProjectionPostHookLiReFsModuleType.ATTENTION:
-        match self.mode:
-          case ProjectionHookMode.FEATURE_ADDITION:
-            output[0][:, :, :] = output[0] + (self.scale * self.direction)
-          case ProjectionHookMode.FEATURE_ABLATION:
-            projection = (output[0] @ self.direction).unsqueeze(-1) * self.direction
-            output[0][:, :, :] = output[0] - projection
-          
-          # LiReFs specific modes
-          case ProjectionHookMode.LIREFS_SOURCE_CODE:
-            projection = (output[0] @ self.direction).unsqueeze(-1) * self.direction
+        match self.steering_mode:
+          case ProjectionHookMode.FEATURE_AMPLIFICATION:
+            projection = compute_projection(
+              data=output[0],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
             output[0][:, :, :] = output[0] + (self.scale * projection)
+          case ProjectionHookMode.FEATURE_ADDITION:
+            output[0][:, :, :] = output[0] + (self.scale * self.feature_direction_normalized)
+          case ProjectionHookMode.FEATURE_ABLATION:
+            projection = compute_projection(
+              data=output[0],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            output[0][:, :, :] = output[0] - projection
           case _:
             raise ValueError(f"Unsupported mode: {self.mode}")
       case ProjectionPostHookLiReFsModuleType.MLP:
-        match self.mode:
+        match self.steering_mode:
+          case ProjectionHookMode.FEATURE_AMPLIFICATION:
+            projection = compute_projection(
+              data=output,
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            output[:, :, :] = output + projection
           case ProjectionHookMode.FEATURE_ADDITION:
-            output[:, :, :] = output + (self.scale * self.direction)
+            output[:, :, :] = output + (self.scale * self.feature_direction)
           case ProjectionHookMode.FEATURE_ABLATION:
-            projection = (output @ self.direction).unsqueeze(-1) * self.direction
+            projection = compute_projection(
+              data=output,
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
             output[:, :, :] = output - projection
-          
-          # LiReFs specific modes
-          case ProjectionHookMode.LIREFS_SOURCE_CODE:
-            projection = (output @ self.direction).unsqueeze(-1) * self.direction
-            output[:, :, :] = output + (self.scale * projection)
           case _:
             raise ValueError(f"Unsupported mode: {self.mode}")
       case _:

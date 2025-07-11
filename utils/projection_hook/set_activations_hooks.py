@@ -9,8 +9,9 @@ from torch.utils.hooks import RemovableHandle
 
 def set_activations_hooks(
   model: nn.Module,
-  directions: dict[int, Float[Tensor, "n_embd"]],
+  feature_directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfig,
+  overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
 ):
   """
   Note:
@@ -25,8 +26,9 @@ def set_activations_hooks(
     case "huginn_raven":
       hooks = set_activations_hooks_huginn(
         model=model,
-        directions=directions,
+        feature_directions=feature_directions,
         config=config,
+        overall_directions_magnitude=overall_directions_magnitude,
         hooks=hooks
       )
 
@@ -34,8 +36,9 @@ def set_activations_hooks(
     case "llama":
       hooks = set_activations_hooks_lirefs(
         model=model,
-        directions=directions,
+        feature_directions=feature_directions,
         config=config,
+        overall_directions_magnitude=overall_directions_magnitude,
         hooks=hooks
       )
 

@@ -17,7 +17,7 @@ class ProjectionHookMode(Enum):
   """
   FEATURE_ADDITION = "FEATURE_ADDITION"
   FEATURE_ABLATION = "FEATURE_ABLATION"
-  LIREFS_SOURCE_CODE = "LIREFS_SOURCE_CODE"
+  FEATURE_AMPLIFICATION = "LIREFS_SOURCE_CODE"
 
   def __str__(self):
     return self.value

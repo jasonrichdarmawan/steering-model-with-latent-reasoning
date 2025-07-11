@@ -10,8 +10,9 @@ from typing import NamedTuple
 
 def set_activations_hooks_huginn(
   model: nn.Module,
-  directions: dict[int, Float[Tensor, "n_embd"]],
+  feature_directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfig,
+  overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
   hooks: list[RemovableHandle] | None = None,
 ) -> list[RemovableHandle]:
   if hooks is None:
@@ -41,12 +42,14 @@ def set_activations_hooks_huginn(
     else:
       raise ValueError(f"Module with layer index {layer_index} is out of bounds for the model.")
 
-    if config["hidden_states_hooks"]["pre_hook"]:
+    if config["hidden_states_hooks_config"]["pre_hook"]:
       print(f"Registering pre-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       pre_hook = ProjectionPreHookHuginn(
-        mode=config["mode"],
+        steering_mode=config["steering_mode"],
+        direction_normalization_mode=config["direction_normalization_mode"],
         selected_depth_indices=depth_indices,
-        directions=directions,
+        feature_directions=feature_directions,
+        overall_direction_magnitude=overall_directions_magnitude,
         scale=config["scale"],
       )
       hook = module.register_forward_pre_hook(
@@ -55,12 +58,14 @@ def set_activations_hooks_huginn(
       )
       hooks.append(hook)
 
-    if config["hidden_states_hooks"]["post_hook"]:
+    if config["hidden_states_hooks_config"]["post_hook"]:
       print(f"Registering post-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       post_hook = ProjectionPostHookHuginn(
-        mode=config["mode"],
+        steering_mode=config["steering_mode"],
+        direction_normalization_mode=config["direction_normalization_mode"],
         selected_depth_indices=depth_indices,
-        directions=directions,
+        feature_directions=feature_directions,
+        overall_direction_magnitude=overall_directions_magnitude,
         scale=config["scale"],
       )
       hook = module.register_forward_hook(
