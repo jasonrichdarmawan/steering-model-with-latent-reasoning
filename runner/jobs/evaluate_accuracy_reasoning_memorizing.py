@@ -61,7 +61,7 @@ def get_evaluate_accuracy_reasoning_memorizing(
   layer_indices_arg = f"--layer_indices {' '.join(map(str, layer_indices))}" if layer_indices else ""
   with_hidden_states_pre_hook_flag = "--with_hidden_states_pre_hook" if with_hidden_states_pre_hook else ""
   with_hidden_states_post_hook_flag = "--with_hidden_states_post_hook" if with_hidden_states_post_hook else ""
-  scale_arg = f"--scale {scale}" if with_intervention else ""
+  scale_arg = f"--scale {scale}" if with_intervention and scale else ""
 
   return shell.format(
     workspace_path=workspace_path,

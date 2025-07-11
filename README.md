@@ -115,7 +115,7 @@ WORKSPACE_PATH="/root/autodl-fs"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_evaluate_lm_eval_with_intervention_127 \
+--jobs mmlu_evaluate_lm_eval_with_intervention_scale_with_overall_magnitude_feature_amplification \
 --output_path "$WORKSPACE_PATH/experiments/runner" \
 --shutdown_after_experiment
 ```
@@ -126,6 +126,7 @@ Jobs:
 - mmlu_pro_evaluate_lm_eval_with_intervention_129
 - mmlu_evaluate_lm_eval
 - mmlu_evaluate_lm_eval_with_intervention
+- mmlu_evaluate_lm_eval_with_intervention_scale_with_overall_magnitude_feature_amplification
 - mmlu_evaluate_lm_eval_with_intervention_1
 - mmlu_evaluate_lm_eval_with_intervention_127
 - mmlu_evaluate_lm_eval_with_intervention_129
