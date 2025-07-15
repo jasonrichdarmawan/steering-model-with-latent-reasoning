@@ -40,10 +40,10 @@
 
 See the subsections below for the examples.
 
-You can see the list of jobs in the [experiments/runner/jobs](experiments/runner/jobs) folder.
+You can see the list of jobs in the [runner/jobs](runner/jobs) folder.
 
 A job consists of multiple sub-jobs. If you want to run specific
-sub-job, then see the `experiments/runner/jobs/[job_name]/_[job_name].py` file
+sub-job, then see the `runner/jobs/[job_name]/_[job_name].py` file
 
 ## How to save candidate directions?
 
