@@ -49,7 +49,7 @@ def process_hidden_states(
     case ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN:
       for layer_index in n_layers_to_cache:
         for batch_index in n_batches_to_cache:
-          hidden_state = hidden_states[layer_index][batch_index, -1:].clone()
+          hidden_state = hidden_states[layer_index][batch_index, -1].clone()
           processed_hidden_states[layer_index].append(hidden_state)
     case ProcessHiddenStatesMode.ALL_TOKENS:
       for layer_index in n_layers_to_cache:

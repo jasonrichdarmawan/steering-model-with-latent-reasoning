@@ -45,6 +45,20 @@ You can see the list of jobs in the [runner/jobs](runner/jobs) folder.
 A job consists of multiple sub-jobs. If you want to run specific
 sub-job, then see the `runner/jobs/[job_name]/_[job_name].py` file
 
+## How to save hidden states?
+
+```shell
+WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
+
+python runner/main.py \
+--workspace_path "$WORKSPACE_PATH" \
+--jobs save_hidden_states \
+--output_path "$WORKSPACE_PATH/experiments/runner"
+```
+
+Jobs:
+- save_hidden_states
+
 ## How to save candidate directions?
 
 ```shell
