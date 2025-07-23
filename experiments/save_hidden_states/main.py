@@ -25,6 +25,8 @@ from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import prepare_queries
+from utils import SaveHiddenStatesQueryLabel
+from utils import SaveHiddenStatesOutput
 from utils import get_n_layers
 from utils import tokenize_text
 from utils import get_hidden_states
@@ -116,15 +118,8 @@ del sampled_data
 
 # %%
 
-class QueryLabel(Enum):
-  REASONING = "REASONING"
-  MEMORIZING = "MEMORIZING"
-
-  def __str__(self):
-    return self.value
-
 class QueryWithLabel(TypedDict):
-  label: QueryLabel
+  label: SaveHiddenStatesQueryLabel
   query: str
 
 print("Sorting queries by query length")
@@ -132,9 +127,9 @@ queries_with_idx = list(enumerate(queries))
 queries_with_label: list[QueryWithLabel] = []
 for index, query in queries_with_idx:
   if index in reasoning_indices:
-    label = QueryLabel.REASONING
+    label = SaveHiddenStatesQueryLabel.REASONING
   elif index in memorizing_indices:
-    label = QueryLabel.MEMORIZING
+    label = SaveHiddenStatesQueryLabel.MEMORIZING
   else:
     raise ValueError(
       f"Index {index} not found in either reasoning or memorizing indices."
@@ -158,12 +153,6 @@ queries_batched = [
 del queries_sorted
 
 # %%
-
-class SaveHiddenStatesOutput(TypedDict):
-  queries: list[str]
-  query_token_lengths: list[int]
-  labels: list[QueryLabel]
-  hidden_states: dict[int, list[Float[t.Tensor, "seq_len n_embd"]]]
 
 output: SaveHiddenStatesOutput = {
   'queries': [],
