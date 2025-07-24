@@ -13,3 +13,7 @@ matplotlib~=3.10
 
 # job: evaluate_lm_eval
 lm_eval~=0.4
+
+# job: train_linear_probes
+einops~=0.8
+eindex-callum~=0.1

@@ -9,10 +9,14 @@ class Args(TypedDict):
   epochs: int
 
   lr: float
+  weight_decay: float
 
   sample_size: int | None
   test_ratio: float
   batch_size: int
+
+  moving_average_window_size_step: int | None
+  moving_average_window_size_epoch: int | None
 
   output_dir: str | None
   checkpoint_freq: int | None
@@ -45,6 +49,11 @@ def parse_args() -> Args:
     type=float,
     help="Learning rate for training the linear probe.",
   )
+  parser.add_argument(
+    '--weight_decay',
+    type=float,
+    help="Weight decay for the optimizer.",
+  )
 
   parser.add_argument(
     '--sample_size',
@@ -62,6 +71,19 @@ def parse_args() -> Args:
     '--batch_size',
     type=int,
     help="Batch size for training the linear probe.",
+  )
+
+  parser.add_argument(
+    '--moving_average_window_size_step',
+    type=int,
+    help="Window size for moving average of losses during training. If not specified, no moving average will be applied.",
+    default=None,
+  )
+  parser.add_argument(
+    '--moving_average_window_size_epoch',
+    type=int,
+    help="Window size for moving average of losses per epoch. If not specified, no moving average will be applied.",
+    default=None,
   )
 
   parser.add_argument(

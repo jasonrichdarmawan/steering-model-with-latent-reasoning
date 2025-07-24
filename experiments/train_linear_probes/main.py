@@ -37,7 +37,7 @@ from typing import TypedDict
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
-  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  WORKSPACE_PATH = "/root/autodl-fs"
   sys.argv = [
     'main.py',
 
@@ -45,13 +45,17 @@ if False:
 
     '--hidden_states_file_path', f'{WORKSPACE_PATH}/experiments/save_hidden_states/huginn-0125_hidden_states_FIRST_ANSWER_TOKEN.pt',
     
-    '--epochs', '100',
+    '--epochs', '1000',
 
-    '--lr', str(1e-5),
+    '--lr', str(1e-4),
+    '--weight_decay', str(1e-2), 
 
     # '--sample_size', '200', 
     '--test_ratio', '0.25',
     '--batch_size', '32',
+
+    # '--moving_average_window_size_step', '50',
+    # '--moving_average_window_size_epoch', '1',
 
     '--output_dir', f'{WORKSPACE_PATH}/experiments/train_linear_probes',
     '--checkpoint_freq', '50',
@@ -142,6 +146,7 @@ class LinearProbeTrainerArgs:
     device: t.device,
     n_epochs: int, 
     lr: float, 
+    weight_decay: float,
     x_train: Float[t.Tensor, "batch_size n_layers n_embd"], 
     y_train: Float[t.Tensor, "batch_size"], 
     x_test: Float[t.Tensor, "test_size n_layers n_embd"], 
@@ -156,6 +161,7 @@ class LinearProbeTrainerArgs:
 
     self.n_epochs = n_epochs
     self.lr = lr
+    self.weight_decay = weight_decay
 
     self.x_train = x_train
     self.y_train = y_train
@@ -225,8 +231,13 @@ class LinearProbeTrainer:
     self.optimizer = t.optim.AdamW(
       [self.linear_probe],
       lr=self.args.lr,
+      weight_decay=self.args.weight_decay,
     )
 
+    self.best_layer_index = 0
+
+    best_epoch = 0
+    best_train_loss = float('inf')
     best_test_loss = float('inf')
     epochs_since_best = 0
 
@@ -244,19 +255,42 @@ class LinearProbeTrainer:
         The norm is computed over all gradients of a linear probe parameters,
         and if the norm exceeds `max_norm`, the gradients are scaled down
         ```python
-        param = t.nn.Parameter(t.arange(0, 10, dtype=t.float32))
-        optimizer = t.optim.SGD([param], lr=0.1)
+        linear_probe = t.arange(0, 2 * 10, dtype=t.float32).reshape(2,10)
+        linear_probe.requires_grad = True
+        optimizer = t.optim.SGD([linear_probe], lr=0.1)
 
-        loss = param.sum()
+        loss = linear_probe[0].sum()
+        # loss += (linear_probe[1] * 2).sum()
         loss.backward()
 
-        print("Gradients before clipping:", param.grad)
-        t.nn.utils.clip_grad_norm_([param], max_norm=1.0)
-        print("Gradients after clipping:", param.grad)
+        print("Parameter before step:")
+        print("linear_probe[0]:", linear_probe[0])
+        print("linear_probe[1]:", linear_probe[1])
+
+        print("Gradients before clipping:")
+        print("linear_probe.grad[0]:", linear_probe.grad[0])
+        print("linear_probe.grad[1]:", linear_probe.grad[1])
+        grad = linear_probe.grad[0]
+        norm = grad.norm()
+        if norm > 1.0:
+          linear_probe.grad[0].mul_(1.0 / norm)
+        print("Gradients after clipping:")
+        print("linear_probe.grad[0]:", linear_probe.grad[0])
+        print("linear_probe.grad[1]:", linear_probe.grad[1])
+
+        optimizer.step()
+
+        print("Parameter after step")
+        print("linear_probe[0]:", linear_probe[0])
+        print("linear_probe[1]:", linear_probe[1])
         ```
         """
-        for i in range(self.linear_probe.shape[0]):
-          t.nn.utils.clip_grad_norm_(self.linear_probe[i], max_norm=1.0)
+        with t.no_grad():
+          for i in range(self.linear_probe.shape[0]):
+            grad = self.linear_probe.grad[i]
+            norm = grad.norm()
+            if norm > 1.0:
+              self.linear_probe.grad[i].mul_(1.0 / norm)
 
         self.optimizer.step()
         self.optimizer.zero_grad()
@@ -283,24 +317,6 @@ class LinearProbeTrainer:
         })
 
         self.test_step += 1
-      
-      # Calculate average losses for the epoch
-      start_train_step = self.train_step - len(full_train_indices)
-      end_train_step = self.train_step
-      start_test_step = self.test_step - len(full_test_indices)
-      end_test_step = self.test_step
-      train_loss_avg_epoch = np.mean([
-        log['data']['train/total_loss'] 
-        for log in self.results['logs']
-        if 'train/total_loss' in log['data'] and start_train_step <= log['data']['train_step'] < end_train_step
-      ])
-      test_loss_avg_epoch = np.mean([
-        log['data']['validate/total_loss'] 
-        for log in self.results['logs']
-        if 'validate/total_loss' in log['data'] 
-        and start_test_step <= log['data']['test_step'] < end_test_step
-      ])
-      progress_bar.set_description(f"Epoch {epoch}/{self.args.n_epochs} Train Loss: {train_loss_avg_epoch.item():.4f} Test Loss: {test_loss_avg_epoch.item():.4f}")
 
       # Save checkpoint
       if self.args.output_dir and epoch > 0 and epoch % self.args.checkpoint_freq == 0 or epoch == self.args.n_epochs - 1:
@@ -311,26 +327,43 @@ class LinearProbeTrainer:
         self.save_checkpoint(checkpoint_path=checkpoint_path)
       
       # Check for best test loss
-      layerwise_test_losses = [
+      start_train_step = self.train_step - len(full_train_indices)
+      end_train_step = self.train_step
+      start_test_step = self.test_step - len(full_test_indices)
+      end_test_step = self.test_step
+
+      layerwise_train_losses_epoch = t.tensor(
         [
-          log['data'][f'validate/loss_{layer_index}'] 
-          for log in self.results['logs']
-          if f'validate/loss_{layer_index}' in log['data'] 
-          and start_test_step <= log['data']['test_step'] < end_test_step
-        ]
-        for layer_index in range(self.args.n_layers)
-      ]
-      layerwise_test_losses_per_epoch = np.array(
-        [
-          np.mean(layerwise_test_losses[layer_index])
+          [
+            log['data'][f'train/loss_{layer_index}'] 
+            for log in self.results['logs']
+            if f'train/loss_{layer_index}' in log['data'] 
+            and start_train_step <= log['data']['train_step'] < end_train_step
+          ]
           for layer_index in range(self.args.n_layers)
-        ]
-      )
-      best_layer_index_epoch = np.argmin(layerwise_test_losses_per_epoch)
-      best_test_loss_avg_epoch = layerwise_test_losses_per_epoch[best_layer_index_epoch]
-      if best_test_loss > best_test_loss_avg_epoch:
-        best_test_loss = best_test_loss_avg_epoch
-        print(f"New best test loss: {best_test_loss:.4f} at epoch {epoch}, layer {best_layer_index_epoch}")
+        ], 
+        device=self.args.device,
+      ).mean(dim=1)
+      layerwise_test_losses_epoch = t.tensor(
+        [
+          [
+            log['data'][f'validate/loss_{layer_index}'] 
+            for log in self.results['logs']
+            if f'validate/loss_{layer_index}' in log['data'] 
+            and start_test_step <= log['data']['test_step'] < end_test_step
+          ]
+          for layer_index in range(self.args.n_layers)
+        ], 
+        device=self.args.device, 
+      ).mean(dim=1)
+      best_layer_index_epoch = t.argmin(layerwise_test_losses_epoch)
+      best_train_loss_epoch = layerwise_train_losses_epoch[best_layer_index_epoch]
+      best_test_loss_epoch = layerwise_test_losses_epoch[best_layer_index_epoch]
+      if best_test_loss > best_test_loss_epoch:
+        best_epoch = epoch
+        best_layer_index = best_layer_index_epoch
+        best_train_loss = best_train_loss_epoch
+        best_test_loss = best_test_loss_epoch
         if self.args.output_dir:
           checkpoint_path = os.path.join(
             self.args.output_dir,
@@ -349,6 +382,8 @@ class LinearProbeTrainer:
       if self.args.use_early_stopping and epochs_since_best == self.args.early_stopping_patience:
         print(f"Early stopping triggered after {self.args.early_stopping_patience} epochs without improvement.")
         break
+
+      progress_bar.set_description(f"Epoch {epoch}/{self.args.n_epochs} Layer: {best_layer_index_epoch} Train Loss: {best_train_loss_epoch.item():.4f} Test Loss: {best_test_loss_epoch.item():.4f} Best Epoch: {best_epoch} Layer: {best_layer_index} Train Loss: {best_train_loss.item():.4f} Test Loss: {best_test_loss.item():.4f}")
 
       self.current_epoch += 1
 
@@ -406,7 +441,6 @@ class LinearProbeTrainer:
     **kwargs,
   ):
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-    print(f"Saving checkpoint to {checkpoint_path}...")
     t.save(
       {
         'linear_probe': self.linear_probe,
@@ -452,8 +486,9 @@ class LinearProbeTrainer:
 
 trainer_args = LinearProbeTrainerArgs(
   device=args['device'],
-  epochs=args['epochs'],
+  n_epochs=args['epochs'],
   lr=args['lr'],
+  weight_decay=args['weight_decay'],
   batch_size=args['batch_size'],
   x_train=x_train,
   y_train=y_train,
@@ -485,9 +520,11 @@ def compute_moving_average(
 plots_per_row = 3
 layers_per_plot = 4
 n_layers = trainer_args.n_layers
-n_plots = 1 + (n_layers + layers_per_plot - 1) // layers_per_plot
+n_plots = 2 + (n_layers + layers_per_plot - 1) // layers_per_plot
 n_rows = (n_plots + plots_per_row - 1) // plots_per_row
 n_cols = plots_per_row
+
+window_size = args['moving_average_window_size_step'] or 1
 
 fig, axes = plt.subplots(
   nrows=n_rows,
@@ -501,7 +538,6 @@ logs = trainer.results['logs']
 train_steps = [log['data']['train_step'] for log in logs if 'train_step' in log['data']]
 train_losses = [log['data']['train/total_loss'] for log in logs if 'train/total_loss' in log['data']]
 
-window_size = ( trainer_args.train_size - (trainer_args.train_size % trainer_args.batch_size) ) // trainer_args.batch_size
 smoothed_train_steps = train_steps[window_size - 1:]  # Adjust steps to match smoothed losses
 smoothed_train_losses = compute_moving_average(
   data=train_losses, 
@@ -519,7 +555,28 @@ axes[0].set_ylabel('Loss')
 axes[0].legend()
 axes[0].grid(True)
 
-for plot_idx in range(1, n_plots):
+best_layer_index = trainer.best_layer_index
+best_train_losses = [
+  log['data'][f'train/loss_{best_layer_index}'] 
+  for log in logs if f'train/loss_{best_layer_index}' in log['data']
+]
+smoothed_best_train_losses = compute_moving_average(
+  data=best_train_losses,
+  window_size=window_size,
+)
+
+axes[1].plot(
+  smoothed_train_steps,
+  smoothed_best_train_losses,
+  label='Layer {best_layer_index}',
+)
+axes[1].set_title('Best Layer Train Losses')
+axes[1].set_xlabel('Step')
+axes[1].set_ylabel('Loss')
+axes[1].legend()
+axes[1].grid(True)
+
+for plot_idx in range(2, n_plots):
   ax = axes[plot_idx]
 
   start_layer_index = (plot_idx - 1) * layers_per_plot
@@ -564,9 +621,11 @@ print("Comparing train and test losses...")
 plots_per_row = 3
 layers_per_plot = 4
 n_layers = trainer_args.n_layers
-n_plots = 1 + (n_layers + layers_per_plot - 1) // layers_per_plot
+n_plots = 2 + (n_layers + layers_per_plot - 1) // layers_per_plot
 n_rows = (n_plots + plots_per_row - 1) // plots_per_row
 n_cols = plots_per_row
+
+window_size = args['moving_average_window_size_epoch'] or 1
 
 fig, axes = plt.subplots(
   nrows=n_rows,
@@ -593,7 +652,6 @@ test_losses_per_epoch = compute_epoch_average(
   n_epochs=n_epochs
 )
 
-window_size = 10
 smoothed_train_losses_per_epoch = compute_moving_average(
   data=train_losses_per_epoch,
   window_size=window_size,
@@ -620,7 +678,42 @@ axes[0].set_ylabel('Loss')
 axes[0].legend()
 axes[0].grid(True)
 
-for plot_idx in range(1, n_plots):
+best_layer_index = trainer.best_layer_index
+best_train_losses = compute_epoch_average(
+  losses=[
+    log['data'][f'train/loss_{best_layer_index}'] 
+    for log in logs if f'train/loss_{best_layer_index}' in log['data']
+  ],
+  n_epochs=n_epochs,
+)
+best_test_losses = compute_epoch_average(
+  losses=[
+    log['data'][f'validate/loss_{best_layer_index}'] 
+    for log in logs if f'validate/loss_{best_layer_index}' in log['data']
+  ],
+  n_epochs=n_epochs,
+)
+smoothed_best_train_losses = compute_moving_average(
+  data=best_train_losses,
+  window_size=window_size,
+)
+axes[1].plot(
+  smoothed_epochs,
+  smoothed_best_train_losses,
+  label=f'Layer {best_layer_index} Train Loss',
+)
+axes[1].plot(
+  smoothed_epochs,
+  best_test_losses,
+  label=f'Layer {best_layer_index} Test Loss',
+)
+axes[1].set_title('Best Layer Train and Test Losses')
+axes[1].set_xlabel('Epoch')
+axes[1].set_ylabel('Loss')
+axes[1].legend()
+axes[1].grid(True)
+
+for plot_idx in range(2, n_plots):
   ax = axes[plot_idx]
 
   start_layer_index = (plot_idx - 1) * layers_per_plot
