@@ -37,7 +37,7 @@ from typing import TypedDict
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
-  WORKSPACE_PATH = "/root/autodl-fs"
+  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
   sys.argv = [
     'main.py',
 
@@ -47,7 +47,7 @@ if False:
     
     '--epochs', '1000',
 
-    '--lr', str(1e-4),
+    '--lr', str(5e-5),
     '--weight_decay', str(1e-2), 
 
     # '--sample_size', '200', 
@@ -128,7 +128,7 @@ del hidden_states
 
 def compute_epoch_average(
   losses: list[float], 
-  n_epochs: int
+  n_epochs: int,
 ):
   if not losses:
     return []
@@ -213,9 +213,11 @@ class LinearProbeTrainer:
     self.linear_probe = args.setup_linear_probe()
 
   def train(self):
-    self.current_epoch = 0
-    self.train_step = 0
-    self.test_step = 0
+    self.current_epoch = 1
+    self.train_step = 1
+    self.test_step = 1
+
+    self.best_layer_index = 0
 
     config = {
       'epochs': self.args.n_epochs,
@@ -234,15 +236,15 @@ class LinearProbeTrainer:
       weight_decay=self.args.weight_decay,
     )
 
-    self.best_layer_index = 0
-
-    best_epoch = 0
+    best_epoch = 1
     best_train_loss = float('inf')
     best_test_loss = float('inf')
     epochs_since_best = 0
 
-    progress_bar = tqdm(range(self.args.n_epochs))
+    progress_bar = tqdm(range(1, self.args.n_epochs + 1))
     for epoch in progress_bar:
+      self.current_epoch = epoch
+
       full_train_indices = self.shuffle_training_indices()
 
       for indices in full_train_indices:
@@ -327,41 +329,41 @@ class LinearProbeTrainer:
         self.save_checkpoint(checkpoint_path=checkpoint_path)
       
       # Check for best test loss
-      start_train_step = self.train_step - len(full_train_indices)
-      end_train_step = self.train_step
-      start_test_step = self.test_step - len(full_test_indices)
-      end_test_step = self.test_step
+      start_train_step_epoch = self.train_step - len(full_train_indices)
+      end_train_step_epoch = self.train_step
+      start_test_step_epoch = self.test_step - len(full_test_indices)
+      end_test_step_epoch = self.test_step
 
-      layerwise_train_losses_epoch = t.tensor(
+      train_losses_epoch_per_layer = t.tensor(
         [
           [
             log['data'][f'train/loss_{layer_index}'] 
             for log in self.results['logs']
             if f'train/loss_{layer_index}' in log['data'] 
-            and start_train_step <= log['data']['train_step'] < end_train_step
+            and start_train_step_epoch <= log['data']['train_step'] < end_train_step_epoch
           ]
           for layer_index in range(self.args.n_layers)
         ], 
         device=self.args.device,
       ).mean(dim=1)
-      layerwise_test_losses_epoch = t.tensor(
+      test_losses_epoch_per_layer = t.tensor(
         [
           [
             log['data'][f'validate/loss_{layer_index}'] 
             for log in self.results['logs']
             if f'validate/loss_{layer_index}' in log['data'] 
-            and start_test_step <= log['data']['test_step'] < end_test_step
+            and start_test_step_epoch <= log['data']['test_step'] < end_test_step_epoch
           ]
           for layer_index in range(self.args.n_layers)
         ], 
         device=self.args.device, 
       ).mean(dim=1)
-      best_layer_index_epoch = t.argmin(layerwise_test_losses_epoch)
-      best_train_loss_epoch = layerwise_train_losses_epoch[best_layer_index_epoch]
-      best_test_loss_epoch = layerwise_test_losses_epoch[best_layer_index_epoch]
+      best_layer_index_epoch = t.argmin(test_losses_epoch_per_layer)
+      best_train_loss_epoch = train_losses_epoch_per_layer[best_layer_index_epoch]
+      best_test_loss_epoch = test_losses_epoch_per_layer[best_layer_index_epoch]
       if best_test_loss > best_test_loss_epoch:
+        self.best_layer_index = best_layer_index_epoch
         best_epoch = epoch
-        best_layer_index = best_layer_index_epoch
         best_train_loss = best_train_loss_epoch
         best_test_loss = best_test_loss_epoch
         if self.args.output_dir:
@@ -378,14 +380,12 @@ class LinearProbeTrainer:
       else:
         epochs_since_best += 1
 
+      progress_bar.set_description(f"Epoch {epoch}/{self.args.n_epochs} Layer: {best_layer_index_epoch} Train Loss: {best_train_loss_epoch.item():.4f} Test Loss: {best_test_loss_epoch.item():.4f} Best Epoch: {best_epoch} Layer: {self.best_layer_index} Train Loss: {best_train_loss.item():.4f} Test Loss: {best_test_loss.item():.4f}")
+
       # Early stopping
       if self.args.use_early_stopping and epochs_since_best == self.args.early_stopping_patience:
         print(f"Early stopping triggered after {self.args.early_stopping_patience} epochs without improvement.")
         break
-
-      progress_bar.set_description(f"Epoch {epoch}/{self.args.n_epochs} Layer: {best_layer_index_epoch} Train Loss: {best_train_loss_epoch.item():.4f} Test Loss: {best_test_loss_epoch.item():.4f} Best Epoch: {best_epoch} Layer: {best_layer_index} Train Loss: {best_train_loss.item():.4f} Test Loss: {best_test_loss.item():.4f}")
-
-      self.current_epoch += 1
 
   def shuffle_training_indices(self):
     n_indices = self.args.train_size - (self.args.train_size % self.args.batch_size)
@@ -524,7 +524,14 @@ n_plots = 2 + (n_layers + layers_per_plot - 1) // layers_per_plot
 n_rows = (n_plots + plots_per_row - 1) // plots_per_row
 n_cols = plots_per_row
 
+best_layer_index = trainer.best_layer_index
+
+logs = trainer.results['logs']
+
 window_size = args['moving_average_window_size_step'] or 1
+
+train_steps = [log['data']['train_step'] for log in logs if 'train_step' in log['data']]
+smoothed_train_steps = train_steps[window_size - 1:]  # Adjust steps to match smoothed losses
 
 fig, axes = plt.subplots(
   nrows=n_rows,
@@ -533,15 +540,13 @@ fig, axes = plt.subplots(
 )
 axes = axes.flatten()
 
-logs = trainer.results['logs']
-
-train_steps = [log['data']['train_step'] for log in logs if 'train_step' in log['data']]
-train_losses = [log['data']['train/total_loss'] for log in logs if 'train/total_loss' in log['data']]
-
-smoothed_train_steps = train_steps[window_size - 1:]  # Adjust steps to match smoothed losses
 smoothed_train_losses = compute_moving_average(
-  data=train_losses, 
-  window_size=window_size
+  data=[
+    log['data']['train/total_loss'] 
+    for log in logs 
+    if 'train/total_loss' in log['data']
+  ], 
+  window_size=window_size,
 )
 
 axes[0].plot(
@@ -555,20 +560,18 @@ axes[0].set_ylabel('Loss')
 axes[0].legend()
 axes[0].grid(True)
 
-best_layer_index = trainer.best_layer_index
-best_train_losses = [
-  log['data'][f'train/loss_{best_layer_index}'] 
-  for log in logs if f'train/loss_{best_layer_index}' in log['data']
-]
 smoothed_best_train_losses = compute_moving_average(
-  data=best_train_losses,
+  data=[
+    log['data'][f'train/loss_{best_layer_index}'] 
+    for log in logs if f'train/loss_{best_layer_index}' in log['data']
+  ],
   window_size=window_size,
 )
 
 axes[1].plot(
   smoothed_train_steps,
   smoothed_best_train_losses,
-  label='Layer {best_layer_index}',
+  label=f'Layer {best_layer_index}',
 )
 axes[1].set_title('Best Layer Train Losses')
 axes[1].set_xlabel('Step')
@@ -582,12 +585,12 @@ for plot_idx in range(2, n_plots):
   start_layer_index = (plot_idx - 1) * layers_per_plot
   end_layer_index = min(start_layer_index + layers_per_plot, n_layers)
   for layer_index in range(start_layer_index, end_layer_index):
-    train_losses_per_layer = [
-      log['data'][f'train/loss_{layer_index}'] for log in logs 
-      if f'train/loss_{layer_index}' in log['data']
-    ]
     smoothed_train_losses_per_layer = compute_moving_average(
-      data=train_losses_per_layer,
+      data=[
+        log['data'][f'train/loss_{layer_index}'] 
+        for log in logs 
+        if f'train/loss_{layer_index}' in log['data']
+      ],
       window_size=window_size,
     )
     ax.plot(
@@ -627,6 +630,14 @@ n_cols = plots_per_row
 
 window_size = args['moving_average_window_size_epoch'] or 1
 
+best_layer_index = trainer.best_layer_index
+
+logs = trainer.results['logs']
+
+n_epochs = trainer.current_epoch
+epochs = list(range(n_epochs))
+smoothed_epochs = epochs[window_size - 1:]  # Adjust epochs to match smoothed losses
+
 fig, axes = plt.subplots(
   nrows=n_rows,
   ncols=n_cols,
@@ -634,33 +645,28 @@ fig, axes = plt.subplots(
 )
 axes = axes.flatten()
 
-logs = trainer.results['logs']
-
-train_steps = [log['data']['train_step'] for log in logs if 'train_step' in log['data']]
-train_losses = [log['data']['train/total_loss'] for log in logs if 'train/total_loss' in log['data']]
-test_steps = [log['data']['test_step'] for log in logs if 'test_step' in log['data']]
-test_losses = [log['data']['validate/total_loss'] for log in logs if 'validate/total_loss' in log['data']]
-
-n_epochs = trainer.current_epoch
-epochs = list(range(n_epochs))
-train_losses_per_epoch = compute_epoch_average(
-  losses=train_losses,
-  n_epochs=n_epochs
-)
-test_losses_per_epoch = compute_epoch_average(
-  losses=test_losses, 
-  n_epochs=n_epochs
-)
-
 smoothed_train_losses_per_epoch = compute_moving_average(
-  data=train_losses_per_epoch,
+  data=compute_epoch_average(
+    losses=[
+      log['data']['train/total_loss'] 
+      for log in logs 
+      if 'train/total_loss' in log['data']
+    ],
+    n_epochs=n_epochs
+  ),
   window_size=window_size,
 )
 smoothed_test_losses_per_epoch = compute_moving_average(
-  data=test_losses_per_epoch,
+  data=compute_epoch_average(
+    losses=[
+      log['data']['validate/total_loss'] 
+      for log in logs 
+      if 'validate/total_loss' in log['data']
+    ], 
+    n_epochs=n_epochs
+  ),
   window_size=window_size,
 )
-smoothed_epochs = epochs[window_size - 1:]  # Adjust epochs to match smoothed losses
 
 axes[0].plot(
   smoothed_epochs, 
@@ -678,23 +684,26 @@ axes[0].set_ylabel('Loss')
 axes[0].legend()
 axes[0].grid(True)
 
-best_layer_index = trainer.best_layer_index
-best_train_losses = compute_epoch_average(
-  losses=[
-    log['data'][f'train/loss_{best_layer_index}'] 
-    for log in logs if f'train/loss_{best_layer_index}' in log['data']
-  ],
-  n_epochs=n_epochs,
-)
-best_test_losses = compute_epoch_average(
-  losses=[
-    log['data'][f'validate/loss_{best_layer_index}'] 
-    for log in logs if f'validate/loss_{best_layer_index}' in log['data']
-  ],
-  n_epochs=n_epochs,
-)
 smoothed_best_train_losses = compute_moving_average(
-  data=best_train_losses,
+  data=compute_epoch_average(
+    losses=[
+      log['data'][f'train/loss_{best_layer_index}'] 
+      for log in logs 
+      if f'train/loss_{best_layer_index}' in log['data']
+    ],
+    n_epochs=n_epochs,
+  ),
+  window_size=window_size,
+)
+smoothed_best_test_losses = compute_moving_average(
+  data=compute_epoch_average(
+    losses=[
+      log['data'][f'validate/loss_{best_layer_index}'] 
+      for log in logs 
+      if f'validate/loss_{best_layer_index}' in log['data']
+    ],
+    n_epochs=n_epochs,
+  ),
   window_size=window_size,
 )
 axes[1].plot(
@@ -704,7 +713,7 @@ axes[1].plot(
 )
 axes[1].plot(
   smoothed_epochs,
-  best_test_losses,
+  smoothed_best_test_losses,
   label=f'Layer {best_layer_index} Test Loss',
 )
 axes[1].set_title('Best Layer Train and Test Losses')
@@ -719,30 +728,26 @@ for plot_idx in range(2, n_plots):
   start_layer_index = (plot_idx - 1) * layers_per_plot
   end_layer_index = min(start_layer_index + layers_per_plot, n_layers)
   for layer_index in range(start_layer_index, end_layer_index):
-    train_losses_per_layer = [
-      log['data'][f'train/loss_{layer_index}'] for log in logs 
-      if f'train/loss_{layer_index}' in log['data']
-    ]
-    test_losses_per_layer = [
-      log['data'][f'validate/loss_{layer_index}'] for log in logs 
-      if f'validate/loss_{layer_index}' in log['data']
-    ]
-
-    train_losses_per_epoch_per_layer = compute_epoch_average(
-      losses=train_losses_per_layer,
-      n_epochs=n_epochs,
-    )
-    test_losses_per_epoch_per_layer = compute_epoch_average(
-      losses=test_losses_per_layer,
-      n_epochs=n_epochs,
-    )
-
     smoothed_train_losses_per_epoch_per_layer = compute_moving_average(
-      data=train_losses_per_epoch_per_layer,
+      data=compute_epoch_average(
+        losses=[
+          log['data'][f'train/loss_{layer_index}'] 
+          for log in logs 
+          if f'train/loss_{layer_index}' in log['data']
+        ],
+        n_epochs=n_epochs,
+      ),
       window_size=window_size,
     )
     smoothed_test_losses_per_epoch_per_layer = compute_moving_average(
-      data=test_losses_per_epoch_per_layer,
+      data=compute_epoch_average(
+        losses=[
+          log['data'][f'validate/loss_{layer_index}'] 
+          for log in logs 
+          if f'validate/loss_{layer_index}' in log['data']
+        ],
+        n_epochs=n_epochs,
+      ),
       window_size=window_size,
     )
     ax.plot(
