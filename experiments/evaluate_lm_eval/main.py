@@ -103,7 +103,7 @@ enable_reproducibility()
 
 match args["model_name"]:
   case "huginn-0125":
-    # print(f"{args['model_name']} will use 2 GPUs for parallelization.")
+    print(f"{args['model_name']} will use 2 GPUs for parallelization.")
     device_map = {
       "transformer.wte": 0,
       "freqs_cis": 0,
@@ -111,10 +111,10 @@ match args["model_name"]:
       "transformer.adapter": 0,
       "transformer.core_block.0": 0,
       "transformer.core_block.1": 0,
-      "transformer.core_block.2": 0,
-      "transformer.core_block.3": 0,
-      "transformer.coda": 0,
-      "transformer.ln_f": 0,
+      "transformer.core_block.2": 1,
+      "transformer.core_block.3": 1,
+      "transformer.coda": 1,
+      "transformer.ln_f": 1,
       "lm_head": 0,
     }
   case _:
