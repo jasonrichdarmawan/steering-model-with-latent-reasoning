@@ -24,10 +24,13 @@ def get_mmlu(
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=True,
+      
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      
+      layer_indices=[66],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[66],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -38,11 +41,15 @@ def get_mmlu(
       workspace_path=workspace_path,
       model_name="huginn-0125",
       tasks="mmlu",
+      
       with_intervention=True,
+      
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      
+      layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[1],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -54,10 +61,13 @@ def get_mmlu(
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=True,
+
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+      
+      layer_indices=[127],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[127],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -69,10 +79,13 @@ def get_mmlu(
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=True,
+      
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
+
+      layer_indices=[129],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[129],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -84,10 +97,13 @@ def get_mmlu(
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=True,
+      
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+
+      layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[1],
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -99,10 +115,30 @@ def get_mmlu(
       model_name="huginn-0125",
       tasks="mmlu",
       with_intervention=True,
+      
+      use_candidate_directions=True,
       process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
+      
+      layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      layer_indices=[1],
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+      scale=1.0,
+    )
+    commands.append(command)
+  if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_use_linear_probes":
+    command = get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      tasks="mmlu",
+      with_intervention=True,
+      
+      use_linear_probes=True,
+      
+      layer_indices=[31],
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,

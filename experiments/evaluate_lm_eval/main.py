@@ -24,12 +24,15 @@ from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import ProcessHiddenStatesMode
 from utils import enable_reproducibility
+from utils import get_device_map
 from utils import compute_directions
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
 
 from os.path import join
-import torch
+import torch as t
+from torch import Tensor
+from jaxtyping import Float
 from lm_eval.models.huggingface import HFLM
 from lm_eval import simple_evaluate
 
@@ -39,11 +42,15 @@ if False:
   import sys
 
   print("Programatically setting sys.argv for testing purposes.")
-  WORKSPACE_PATH = "/media/tao/disk4T/jason"
+  WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+  
   MODEL_NAME = "huginn-0125"
-  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
-  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE)
-  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_AMPLIFICATION)
+  
+  PROCESS_HIDDEN_STATES_MODE = ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN
+  
+  DIRECTION_NORMALIZATION_MODE = DirectionNormalizationMode.UNIT_VECTOR
+  PROJECTION_HOOK_MODE = ProjectionHookMode.FEATURE_ADDITION
+  
   sys.argv = [
     'main.py',
     '--data_path', f'{WORKSPACE_PATH}/datasets',
@@ -53,15 +60,21 @@ if False:
 
     '--huginn_mean_recurrence', '32',
 
-    '--with_intervention',
-    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
-    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
-    '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
-    '--projection_hook_mode', PROJECTION_HOOK_MODE,
-    '--layer_indices', '66',
+    # '--with_intervention',
+
+    '--use_linear_probes',
+    '--linear_probes_file_path', f'{WORKSPACE_PATH}/experiments/train_linear_probes/best_checkpoint.pt',
+
+    # '--use_candidate_directions',
+    # '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
+    # '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
+    
+    '--direction_normalization_mode', str(DIRECTION_NORMALIZATION_MODE),
+    '--layer_indices', '31',
+    '--projection_hook_mode', str(PROJECTION_HOOK_MODE),
     # '--with_hidden_states_pre_hook',
     '--with_hidden_states_post_hook',
-    # '--scale', '1.0',
+    '--scale', '1.0',
 
     '--tasks', 'mmlu',
     '--num_fewshot', '0',
@@ -85,6 +98,7 @@ enable_reproducibility()
 
 match args["model_name"]:
   case "huginn-0125":
+    print(f"{args['model_name']} will use 2 GPUs for parallelization.")
     device_map = {
       "transformer.wte": 0,
       "freqs_cis": 0,
@@ -103,10 +117,11 @@ match args["model_name"]:
 
 # %%
 
+print(f"Loading model: {args['model_name']} from path: {args['models_path']}")
 match args["model_name"]:
   case "huginn-0125":
     """
-    # Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
+    Reference: https://github.com/seal-rg/recurrent-pretraining/blob/0d9ed974d253e16498edec5c0c0916fdef4eb339/evaluate_raven/hf_eval_adaptive_compute.py
     """
     model = HFLM(
       pretrained=join(
@@ -116,7 +131,7 @@ match args["model_name"]:
       parallelize=True,
       device_map=device_map,
       mean_recurrence=args["huginn_mean_recurrence"],
-      dtype=torch.bfloat16,
+      dtype=t.bfloat16,
       batch_size=args["batch_size"],
     )
   case _:
@@ -124,34 +139,68 @@ match args["model_name"]:
 
 # %%
 
-feature_directions = None
-overall_directions_magnitude = None
+feature_directions: dict[int, Float[Tensor, "n_embd"]] = None
+overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None
 if args["with_intervention"]:
-  print(f"Computing directions from file: {args['candidate_directions_file_path']}")
-  candidate_directions = torch.load(
-    args['candidate_directions_file_path'],
-    map_location='cpu',
-    weights_only=False,
-  )
+  device_map = get_device_map(model=model.model)
 
-  feature_directions = compute_directions(
-    model=model.model,
-    candidate_directions=candidate_directions,
-    positive_label="reasoning",
-    negative_label="memorizing",
-  )
+  if args['use_linear_probes']:
+    print(f"Loading linear probes from file: {args['linear_probes_file_path']}")
+    checkpoint = t.load(
+      args['linear_probes_file_path'],
+      map_location='cpu',
+      weights_only=True,
+    )
+    print("Best layer index:", checkpoint.get('layer_index', None))
 
-  if args['direction_normalization_mode'] == DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
-    overall_directions_magnitude = {
-      layer_index: candidate_direction.norm(dim=-1)
-      for layer_index, candidate_direction in candidate_directions["overall"]["mean"].items()
+    feature_directions = {
+      layer_index: linear_probe[:, 0] - linear_probe[:, 1]
+      for layer_index, linear_probe in enumerate(checkpoint['linear_probe'])
     }
-    print("Using overall directions magnitude for normalization.")
 
-  del candidate_directions
+    for layer_index, direction in feature_directions.items():
+      feature_directions[layer_index] = direction.to(
+        device=device_map[layer_index],
+        dtype=model.model.dtype,
+      )
+    
+    del checkpoint
+    
+  elif args['use_candidate_directions']:
+    print(f"Computing directions from file: {args['candidate_directions_file_path']}")
+    candidate_directions = t.load(
+      args['candidate_directions_file_path'],
+      map_location='cpu',
+      weights_only=False,
+    )
+
+    feature_directions = compute_directions(
+      model=model.model,
+      candidate_directions=candidate_directions,
+      positive_label="reasoning",
+      negative_label="memorizing",
+    )
+
+    if args['direction_normalization_mode'] == DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
+      print("Using overall directions magnitude for normalization.")  
+      overall_directions_magnitude = {
+        layer_index: candidate_direction.norm(dim=-1)
+        for layer_index, candidate_direction in candidate_directions["overall"]["mean"].items()
+      }
+
+      for layer_index, direction in feature_directions.items():
+        overall_directions_magnitude[layer_index] = overall_directions_magnitude[layer_index].to(
+          device=device_map[layer_index],
+          dtype=model.model.dtype,
+        )
+
+    del candidate_directions
+  else:
+    raise ValueError(
+      "Either `use_linear_probes` or `use_candidate_directions` must be set to True."
+    )
 else:
-  print("No intervention will be performed, skipping hidden states cache and candidate directions computation.")
-  candidate_directions = None
+  print("No intervention will be performed.")
 
 # %%
 
@@ -235,7 +284,7 @@ if args['output_file_path'] is None:
 
 try:
   print(f"Loading existing results from: {args['output_file_path']}")
-  output = torch.load(
+  output = t.load(
     args["output_file_path"],
     map_location='cpu',
     weights_only=False,
@@ -256,10 +305,15 @@ output_key = ' '.join(
       'huginn_mean_recurrence',
       
       'with_intervention',
+
+      'use_linear_probes',
+
+      'use_candidate_directions',
       'process_hidden_states_mode',
+
       'direction_normalization_mode',
-      'projection_hook_mode',
       'layer_indices',
+      'projection_hook_mode',
       'with_hidden_states_pre_hook',
       'with_hidden_states_post_hook',
       'scale',
@@ -282,6 +336,6 @@ output_path = os.path.dirname(args['output_file_path'])
 os.makedirs(output_path, exist_ok=True)
 
 print(f"Saving evaluation results to: {args['output_file_path']}")
-torch.save(output, args['output_file_path'])
+t.save(output, args['output_file_path'])
 
 # %%

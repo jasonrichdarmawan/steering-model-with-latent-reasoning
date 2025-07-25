@@ -37,7 +37,6 @@ def compute_directions(
     
     del positive_candidate_direction
     del negative_candidate_direction
-    # del overall_candidate_direction
     del direction
   torch.cuda.empty_cache()
   

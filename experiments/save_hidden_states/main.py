@@ -178,8 +178,6 @@ for queries_batch in tqdm(queries_batched):
           input_ids=inputs['input_ids'],
           attention_mask=inputs['attention_mask'],
         )
-    case CacheHiddenStatesMode.ALL_TOKENS:
-      pass
     case _:
       raise ValueError(
         f"Unsupported cache hidden states mode: {args['cache_hidden_states_mode']}"

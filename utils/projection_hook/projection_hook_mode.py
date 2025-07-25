@@ -2,7 +2,7 @@ from enum import Enum
 
 class ProjectionHookMode(Enum):
   """
-  - LIREFS_SOURCE_CODE: It doesn't make sense to calculate 
+  - FEATURE_AMPLIFICATION: It doesn't make sense to calculate 
   the projection for feature addition. Suppose the 
   concept direction is not present in the activation, 
   the projection will be zero, and the addition will not 
@@ -17,7 +17,7 @@ class ProjectionHookMode(Enum):
   """
   FEATURE_ADDITION = "FEATURE_ADDITION"
   FEATURE_ABLATION = "FEATURE_ABLATION"
-  FEATURE_AMPLIFICATION = "LIREFS_SOURCE_CODE"
+  FEATURE_AMPLIFICATION = "FEATURE_AMPLIFICATION"
 
   def __str__(self):
     return self.value

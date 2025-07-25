@@ -14,8 +14,14 @@ class Args(TypedDict):
   huginn_mean_recurrence: int | None
 
   with_intervention: bool
+  
+  use_linear_probes: bool
+  linear_probes_file_path: str | None
+
+  use_candidate_directions: bool
   process_hidden_states_mode: ProcessHiddenStatesMode | None
   candidate_directions_file_path: str | None
+  
   direction_normalization_mode: DirectionNormalizationMode | None
   projection_hook_mode: ProjectionHookMode | None
   layer_indices: list[int] | None
@@ -63,6 +69,24 @@ def parse_args() -> Args:
     action='store_true',
     help="Whether to apply intervention during evaluation.",
   )
+
+  parser.add_argument(
+    '--use_linear_probes',
+    action='store_true',
+    help="Whether to use linear probes for the intervention.",
+  )
+  parser.add_argument(
+    '--linear_probes_file_path',
+    type=str,
+    help="Path to the linear probes file. If specified, will load the linear probes from this file.",
+    default=None,
+  )
+  
+  parser.add_argument(
+    '--use_candidate_directions',
+    action='store_true',
+    help="Whether to use candidate directions for the intervention.",
+  )
   parser.add_argument(
     '--process_hidden_states_mode',
     type=ProcessHiddenStatesMode,
@@ -76,6 +100,7 @@ def parse_args() -> Args:
     help="Path to the candidate directions file. If specified, will load the candidate directions from this file.",
     default=None,
   )
+
   parser.add_argument(
     '--direction_normalization_mode',
     type=DirectionNormalizationMode,

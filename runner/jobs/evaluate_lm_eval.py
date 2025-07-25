@@ -14,11 +14,17 @@ python experiments/evaluate_lm_eval/main.py \
 {huginn_mean_recurrence_arg} \
 \
 {with_intervention_flag} \
+\
+{use_linear_probes_flag} \
+{linear_probes_file_path_arg} \
+\
+{use_candidate_directions_flag} \
 {process_hidden_states_mode_arg} \
 {candidate_directions_file_path_arg} \
+\
+{layer_indices_arg} \
 {direction_normalization_mode_arg} \
 {projection_hook_mode_arg} \
-{layer_indices_arg} \
 {with_hidden_states_pre_hook_flag} \
 {with_hidden_states_post_hook_flag} \
 {scale_arg} \
@@ -35,30 +41,88 @@ def get_evaluate_lm_eval(
   model_name: str,
   tasks: str,
   with_intervention: bool,
-  layer_indices: list[int] | None = False,
+  
+  use_linear_probes: bool = False,
+
+  use_candidate_directions: bool = False,
   process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
+
   direction_normalization_mode: DirectionNormalizationMode | None = None,
+  layer_indices: list[int] | None = False,
   projection_hook_mode: ProjectionHookMode | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
   scale: float | None = None,
 ) -> str:
-  huginn_mean_recurrence_arg = "--huginn_mean_recurrence 32" if model_name == "huginn-0125" else ""
+  huginn_mean_recurrence_arg = (
+    "--huginn_mean_recurrence 32" 
+    if model_name == "huginn-0125" 
+    else ""
+  )
 
-  with_intervention_flag = "--with_intervention" if with_intervention else ""
+  with_intervention_flag = (
+    "--with_intervention" 
+    if with_intervention 
+    else ""
+  )
+
+  use_linear_probes_flag = (
+    "--use_linear_probes" 
+    if with_intervention and use_linear_probes 
+    else ""
+  )
+  linear_probes_file_path_arg = (
+    f"--linear_probes_file_path \"$WORKSPACE_PATH/experiments/train_linear_probes/best_checkpoint.pt\"" 
+    if with_intervention and use_linear_probes 
+    else ""
+  )
   
-  process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}" if with_intervention else ""
-  candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" if with_intervention else ""
+  use_candidate_directions_flag = (
+    "--use_candidate_directions" 
+    if with_intervention and use_candidate_directions 
+    else ""
+  )
+  process_hidden_states_mode_arg = (
+    f"--process_hidden_states_mode {process_hidden_states_mode}" 
+    if with_intervention and use_candidate_directions
+    else ""
+  )
+  candidate_directions_file_path_arg = (
+    f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" 
+    if with_intervention and use_candidate_directions 
+    else ""
+  )
 
-  direction_normalization_mode_arg = f"--direction_normalization_mode {direction_normalization_mode}" if with_intervention else ""
-
-  projection_hook_mode_arg = f"--projection_hook_mode {projection_hook_mode}" if with_intervention else ""
-
-  layer_indices_arg = "--layer_indices " + " ".join(map(str, layer_indices)) if layer_indices else ""
-
-  with_hidden_states_pre_hook_flag = "--with_hidden_states_pre_hook" if with_hidden_states_pre_hook else ""
-  with_hidden_states_post_hook_flag = "--with_hidden_states_post_hook" if with_hidden_states_post_hook else ""
-  scale_arg = f"--scale {scale}" if with_intervention and scale else ""
+  layer_indices_arg = (
+    "--layer_indices " + " ".join(map(str, layer_indices)) 
+    if layer_indices 
+    else ""
+  )
+  direction_normalization_mode_arg = (
+    f"--direction_normalization_mode {direction_normalization_mode}" 
+    if with_intervention 
+    else ""
+  )
+  projection_hook_mode_arg = (
+    f"--projection_hook_mode {projection_hook_mode}" 
+    if with_intervention 
+    else ""
+  )
+  with_hidden_states_pre_hook_flag = (
+    "--with_hidden_states_pre_hook" 
+    if with_hidden_states_pre_hook 
+    else ""
+  )
+  with_hidden_states_post_hook_flag = (
+    "--with_hidden_states_post_hook" 
+    if with_hidden_states_post_hook 
+    else ""
+  )
+  scale_arg = (
+    f"--scale {scale}" 
+    if with_intervention and scale 
+    else ""
+  )
 
   return shell.format(
     workspace_path=workspace_path,
@@ -69,11 +133,17 @@ def get_evaluate_lm_eval(
     tasks=tasks,
 
     with_intervention_flag=with_intervention_flag,
+
+    use_linear_probes_flag=use_linear_probes_flag,
+    linear_probes_file_path_arg=linear_probes_file_path_arg,
+    
+    use_candidate_directions_flag=use_candidate_directions_flag,
     process_hidden_states_mode_arg=process_hidden_states_mode_arg,
     candidate_directions_file_path_arg=candidate_directions_file_path_arg,
+    
+    layer_indices_arg=layer_indices_arg,
     direction_normalization_mode_arg=direction_normalization_mode_arg,
     projection_hook_mode_arg=projection_hook_mode_arg,
-    layer_indices_arg=layer_indices_arg,
     with_hidden_states_pre_hook_flag=with_hidden_states_pre_hook_flag,
     with_hidden_states_post_hook_flag=with_hidden_states_post_hook_flag,
     scale_arg=scale_arg,
