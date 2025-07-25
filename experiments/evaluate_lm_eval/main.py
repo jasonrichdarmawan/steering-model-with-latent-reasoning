@@ -114,8 +114,7 @@ match args["model_name"]:
         args["models_path"], 
         args["model_name"]
       ),
-      parallelize=True,
-      device_map=args["device"],
+      device=args["device"],
       mean_recurrence=args["huginn_mean_recurrence"],
       dtype=t.bfloat16,
       batch_size=args["batch_size"],
