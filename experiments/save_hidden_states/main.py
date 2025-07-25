@@ -20,21 +20,19 @@ if False:
 
 from shs_utils import parse_args
 
-from utils import CacheHiddenStatesMode
 from utils import enable_reproducibility
 from utils import load_model_and_tokenizer
 from utils import load_json_dataset
 from utils import prepare_queries
-from utils import SaveHiddenStatesQueryLabel
-from utils import SaveHiddenStatesOutput
 from utils import get_n_layers
 from utils import tokenize_text
 from utils import get_hidden_states
+from utils import CacheHiddenStatesMode
+from utils import SaveHiddenStatesQueryLabel
+from utils import SaveHiddenStatesOutput
 
 from tqdm import tqdm
 import torch as t
-from jaxtyping import Float
-from enum import Enum
 from typing import TypedDict
 
 # %%

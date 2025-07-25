@@ -11,6 +11,7 @@ python experiments/evaluate_lm_eval/main.py \
 \
 --models_path "$WORKSPACE_PATH/transformers" \
 --model_name {model_name} \
+--device cuda:0 \
 \
 {huginn_mean_recurrence_arg} \
 \

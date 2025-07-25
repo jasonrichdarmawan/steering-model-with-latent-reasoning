@@ -14,6 +14,7 @@ def set_activations_hooks_huginn(
   config: ProjectionHookConfig,
   overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
   hooks: list[RemovableHandle] | None = None,
+  verbose: bool = True,
 ) -> list[RemovableHandle]:
   if hooks is None:
     hooks = []
@@ -49,7 +50,8 @@ def set_activations_hooks_huginn(
       raise ValueError(f"Module with layer index {layer_index} is out of bounds for the model.")
 
     if config["hidden_states_hooks_config"]["pre_hook"]:
-      print(f"Registering pre-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
+      if verbose:
+        print(f"Registering pre-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       pre_hook = ProjectionPreHookHuginn(
         steering_mode=config["steering_mode"],
         modification_mode=config["modification_mode"],
@@ -66,7 +68,8 @@ def set_activations_hooks_huginn(
       hooks.append(hook)
 
     if config["hidden_states_hooks_config"]["post_hook"]:
-      print(f"Registering post-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
+      if verbose:
+        print(f"Registering post-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       post_hook = ProjectionPostHookHuginn(
         steering_mode=config["steering_mode"],
         modification_mode=config["modification_mode"],

@@ -93,7 +93,7 @@ class ProjectionPreHookHuginn:
               )
               kwargs["x"] += projection
             case _:
-              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
+              raise ValueError(f"Unsupported token modification mode: {self.modification_mode}")
         case ProjectionHookMode.FEATURE_ADDITION:
           direction = self.feature_directions_normalized[depth_index]
           match self.modification_mode:
@@ -102,7 +102,7 @@ class ProjectionPreHookHuginn:
             case TokenModificationMode.ALL_TOKENS:
               kwargs["x"] += self.scale * direction
             case _:
-              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
+              raise ValueError(f"Unsupported token modification mode: {self.modification_mode}")
         case ProjectionHookMode.FEATURE_ABLATION:
           feature_direction_normalized = self.feature_directions_normalized[depth_index]
           overall_direction_magnitude = (
@@ -128,6 +128,6 @@ class ProjectionPreHookHuginn:
               )
               kwargs["x"] -= projection
             case _:
-              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
+              raise ValueError(f"Unsupported token modification mode: {self.modification_mode}")
         case _:
           raise ValueError(f"Unsupported steering mode: {self.steering_mode}")

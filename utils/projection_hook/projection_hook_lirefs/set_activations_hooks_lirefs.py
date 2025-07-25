@@ -14,6 +14,7 @@ def set_activations_hooks_lirefs(
   config: ProjectionHookConfigLiReFs,
   overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
   hooks: list[RemovableHandle] | None = None,
+  verbose: bool = True,
 ) -> list[RemovableHandle]:
   """
   Set activation hooks for Llama models.
@@ -38,6 +39,8 @@ def set_activations_hooks_lirefs(
     # hidden_states
     if config["hidden_states_hooks_config"]:
       if config["hidden_states_hooks_config"]["pre_hook"]:
+        if verbose:
+          print(f"Registering hidden_states pre-hook for {model.config.model_type} model at layer index {layer_index}")
         pre_hook = ProjectionPreHookLiReFs(
           steering_mode=config["steering_mode"],
           direction_normalization_mode=config["direction_normalization_mode"],
@@ -49,7 +52,6 @@ def set_activations_hooks_lirefs(
           hook=pre_hook,
         )
         hooks.append(hook)
-        print(f"Registering hidden_states pre-hook for {model.config.model_type} model at layer index {layer_index}")
 
       if config["hidden_states_hooks_config"]["post_hook"]:
         raise NotImplementedError(
@@ -64,6 +66,8 @@ def set_activations_hooks_lirefs(
         )
 
       if config["attention_hooks_config"]["post_hook"]:
+        if verbose:
+          print(f"Registering attention post-hook for {model.config.model_type} model at layer index {layer_index}")
         post_hook = ProjectionPostHookLiReFs(
           hook_type=ProjectionPostHookLiReFsModuleType.ATTENTION,
           steering_mode=config["steering_mode"],
@@ -79,7 +83,6 @@ def set_activations_hooks_lirefs(
           hook=post_hook,
         )
         hooks.append(hook)
-        print(f"Registering attention post-hook for {model.config.model_type} model at layer index {layer_index}")
 
     # mlp
     if config["mlp_hooks_config"]:

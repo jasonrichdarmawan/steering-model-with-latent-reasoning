@@ -12,6 +12,8 @@ class Args(TypedDict):
   models_path: str
   model_name: str
 
+  device: str
+
   huginn_mean_recurrence: int | None
 
   with_intervention: bool
@@ -57,6 +59,12 @@ def parse_args() -> Args:
     '--model_name',
     type=str,
     help="Folder name of the specific model to load from the root directory",
+  )
+
+  parser.add_argument(
+    '--device',
+    type=str,
+    help="Device to run the model on (e.g., 'cuda:0', 'cpu')",
   )
 
   parser.add_argument(

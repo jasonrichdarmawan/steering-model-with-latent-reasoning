@@ -12,6 +12,7 @@ def set_activations_hooks(
   feature_directions: dict[int, Float[Tensor, "n_embd"]],
   config: ProjectionHookConfig,
   overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None,
+  verbose: bool = True,
 ):
   """
   Note:
@@ -29,7 +30,8 @@ def set_activations_hooks(
         feature_directions=feature_directions,
         config=config,
         overall_directions_magnitude=overall_directions_magnitude,
-        hooks=hooks
+        hooks=hooks,
+        verbose=verbose,
       )
 
       return hooks
@@ -39,7 +41,8 @@ def set_activations_hooks(
         feature_directions=feature_directions,
         config=config,
         overall_directions_magnitude=overall_directions_magnitude,
-        hooks=hooks
+        hooks=hooks,
+        verbose=verbose,
       )
 
       return hooks

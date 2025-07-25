@@ -129,7 +129,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_evaluate_lm_eval_with_intervention_use_linear_probes_few_shots_1 \
+--jobs evaluate_lm_eval_tasks_piqa_use_linear_probes \
 --output_path "$WORKSPACE_PATH/experiments/runner" \
 --shutdown_after_experiment
 ```
@@ -149,6 +149,8 @@ Jobs:
 - mmlu_evaluate_lm_eval_with_intervention_1_all_tokens_scale_with_overall_magnitude
 - mmlu_evaluate_lm_eval_with_intervention_use_linear_probes
 - mmlu_evaluate_lm_eval_with_intervention_use_linear_probes_few_shots_1
+- evaluate_lm_eval_tasks_piqa
+- evaluate_lm_eval_tasks_piqa_use_linear_probes
 
 Note:
 - mmlu_pro_evaluate_lm_eval and its derivatives with batch size 4 require 2x 3060 or equivalent

@@ -62,9 +62,11 @@ if False:
     '--models_path', f'{WORKSPACE_PATH}/transformers',
     '--model_name', MODEL_NAME,
 
+    '--device', 'cuda:0',
+
     '--huginn_mean_recurrence', '32',
 
-    # '--with_intervention',
+    '--with_intervention',
 
     '--use_linear_probes',
     '--linear_probes_file_path', f'{WORKSPACE_PATH}/experiments/train_linear_probes/best_checkpoint.pt',
@@ -81,8 +83,8 @@ if False:
     '--with_hidden_states_post_hook',
     '--scale', '1.0',
 
-    '--tasks', 'mmlu',
-    '--num_fewshot', '1',
+    '--tasks', 'piqa',
+    '--num_fewshot', '0',
     '--batch_size', '1',
     '--limit', '1',
     '--output_file_path', f'{WORKSPACE_PATH}/experiments/lm_eval_results/{MODEL_NAME}.json',
@@ -101,27 +103,6 @@ enable_reproducibility()
 
 # %%
 
-match args["model_name"]:
-  case "huginn-0125":
-    print(f"{args['model_name']} will use 2 GPUs for parallelization.")
-    device_map = {
-      "transformer.wte": 0,
-      "freqs_cis": 0,
-      "transformer.prelude": 0,
-      "transformer.adapter": 0,
-      "transformer.core_block.0": 0,
-      "transformer.core_block.1": 0,
-      "transformer.core_block.2": 1,
-      "transformer.core_block.3": 1,
-      "transformer.coda": 1,
-      "transformer.ln_f": 1,
-      "lm_head": 0,
-    }
-  case _:
-    raise ValueError(f"Unsupported model name: {args['model_name']}")
-
-# %%
-
 print(f"Loading model: {args['model_name']} from path: {args['models_path']}")
 match args["model_name"]:
   case "huginn-0125":
@@ -134,7 +115,7 @@ match args["model_name"]:
         args["model_name"]
       ),
       parallelize=True,
-      device_map=device_map,
+      device_map=args["device"],
       mean_recurrence=args["huginn_mean_recurrence"],
       dtype=t.bfloat16,
       batch_size=args["batch_size"],
@@ -209,6 +190,31 @@ else:
 
 # %%
 
+from typing import Optional, Any
+import datasets
+from lm_eval.api.task import ConfigurableTask
+
+def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
+  path = os.path.join(
+    args["data_path"], 
+    self.DATASET_PATH,
+  )
+  print(f"Loading dataset from local path: {path}")
+  self.dataset = datasets.load_dataset(
+    path=path,
+    name=self.DATASET_NAME,
+    **dataset_kwargs if dataset_kwargs is not None else {},
+  )
+
+print(
+  "Overriding ConfigurableTask.download to load datasets from local path.\n"
+  f"Specified location: {args['data_path']}/<dataset-name>\n"
+  "Ensure dataset files (including Python scripts) exist at the specified location.\n"
+)
+ConfigurableTask.download = download
+
+# %%
+
 if args['with_intervention']:
   print("Setting up projection hooks for the model.")
   match model.config.model_type:
@@ -236,33 +242,6 @@ if args['with_intervention']:
 else:
   print("No intervention hooks set up, proceeding without them.")
 
-# %%
-
-from typing import Optional, Any
-import datasets
-from lm_eval.api.task import ConfigurableTask
-
-def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
-  path = os.path.join(
-    args["data_path"], 
-    self.DATASET_PATH,
-  )
-  print(f"Loading dataset from local path: {path}")
-  self.dataset = datasets.load_dataset(
-    path=path,
-    name=self.DATASET_NAME,
-    **dataset_kwargs if dataset_kwargs is not None else {},
-  )
-
-print(
-  "Overriding ConfigurableTask.download to load datasets from local path.\n"
-  f"Specified location: {args['data_path']}/<dataset-name>\n"
-  "Ensure dataset files (including Python scripts) exist at the specified location.\n"
-)
-ConfigurableTask.download = download
-
-# %%
-
 match args["model_name"]:
   case "huginn-0125":
     results = simple_evaluate(
@@ -274,8 +253,6 @@ match args["model_name"]:
     print(f"Evaluation results:\n{results}")
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
-
-# %%
 
 if args["with_intervention"]:
   print("Removing projection hooks from the model.")
