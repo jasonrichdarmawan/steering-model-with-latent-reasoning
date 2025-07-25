@@ -18,8 +18,14 @@ def set_activations_hooks_huginn(
   if hooks is None:
     hooks = []
 
-  core_block_last_layer_index: int = model.config.n_layers_in_prelude + model.config.n_layers_in_recurrent_block
-  coda_last_layer_index: int = core_block_last_layer_index + model.config.n_layers_in_coda
+  core_block_last_layer_index: int = (
+    model.config.n_layers_in_prelude 
+    + model.config.n_layers_in_recurrent_block
+  )
+  coda_last_layer_index: int = (
+    core_block_last_layer_index 
+    + model.config.n_layers_in_coda
+  )
 
   depth_indices_per_layer_index = _batch_depth_indices_per_layer_index(
     depth_indices=config["layer_indices"],
@@ -46,6 +52,7 @@ def set_activations_hooks_huginn(
       print(f"Registering pre-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       pre_hook = ProjectionPreHookHuginn(
         steering_mode=config["steering_mode"],
+        modification_mode=config["modification_mode"],
         direction_normalization_mode=config["direction_normalization_mode"],
         selected_depth_indices=depth_indices,
         feature_directions=feature_directions,
@@ -62,6 +69,7 @@ def set_activations_hooks_huginn(
       print(f"Registering post-hook for module with layer index {layer_index}, relative index {relative_layer_index} and depth indices: {depth_indices}")
       post_hook = ProjectionPostHookHuginn(
         steering_mode=config["steering_mode"],
+        modification_mode=config["modification_mode"],
         direction_normalization_mode=config["direction_normalization_mode"],
         selected_depth_indices=depth_indices,
         feature_directions=feature_directions,
@@ -90,14 +98,28 @@ def _batch_depth_indices_per_layer_index(
   """
   Batch depth indices by layer index.
   """
-  recurrent_block_last_depth_index = n_layers_in_prelude + n_layers_in_recurrent_block * mean_recurrence
-  coda_last_depth_index = recurrent_block_last_depth_index + n_layers_in_coda
+  recurrent_block_last_depth_index = (
+    n_layers_in_prelude 
+    + n_layers_in_recurrent_block 
+    * mean_recurrence
+  )
+  coda_last_depth_index = (
+    recurrent_block_last_depth_index 
+    + n_layers_in_coda
+  )
 
-  coda_first_layer_index = n_layers_in_prelude + n_layers_in_recurrent_block
+  coda_first_layer_index = (
+    n_layers_in_prelude 
+    + n_layers_in_recurrent_block
+  )
 
-  effective_expected_depth = n_layers_in_prelude + (
-    n_layers_in_recurrent_block * mean_recurrence
-  ) + n_layers_in_coda
+  effective_expected_depth = (
+    n_layers_in_prelude + (
+      n_layers_in_recurrent_block 
+      * mean_recurrence
+    ) 
+    + n_layers_in_coda
+  )
 
   depth_indices_per_layer_index: dict[DepthIndex, list[int]] = {}
   for depth_index in depth_indices:

@@ -1,6 +1,7 @@
 from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
+from utils import TokenModificationMode
 
 from jobs import get_evaluate_lm_eval
 
@@ -40,6 +41,7 @@ def get_mmlu(
       layer_indices=[66],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -59,6 +61,7 @@ def get_mmlu(
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -77,6 +80,7 @@ def get_mmlu(
       layer_indices=[127],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -95,6 +99,7 @@ def get_mmlu(
       layer_indices=[129],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -113,6 +118,7 @@ def get_mmlu(
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -131,6 +137,7 @@ def get_mmlu(
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -148,6 +155,7 @@ def get_mmlu(
       layer_indices=[31],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
@@ -165,6 +173,7 @@ def get_mmlu(
       layer_indices=[31],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,

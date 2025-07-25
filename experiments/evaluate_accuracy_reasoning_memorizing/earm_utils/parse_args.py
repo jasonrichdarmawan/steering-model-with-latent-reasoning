@@ -1,6 +1,7 @@
 from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
+from utils import TokenModificationMode
 
 from typing import TypedDict
 import argparse
@@ -19,11 +20,14 @@ class Args(TypedDict):
   batch_size: int
 
   with_intervention: bool
+
   process_hidden_states_mode: ProcessHiddenStatesMode | None
   candidate_directions_file_path: str | None
+
+  layer_indices: list[int] | None
   direction_normalization_mode: DirectionNormalizationMode | None
   projection_hook_mode: ProjectionHookMode | None
-  layer_indices: list[int] | None
+  modification_mode: TokenModificationMode | None
   with_hidden_states_pre_hook: bool
   with_hidden_states_post_hook: bool
   scale: float | None
@@ -115,6 +119,13 @@ def parse_args() -> Args:
     type=ProjectionHookMode,
     choices=list(ProjectionHookMode),
     help="Mode for the projection hook intervention.",
+    default=None,
+  )
+  parser.add_argument(
+    '--modification_mode',
+    type=TokenModificationMode,
+    choices=list(TokenModificationMode),
+    help="Mode for modifying tokens during the intervention.",
     default=None,
   )
   parser.add_argument(

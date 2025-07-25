@@ -1,4 +1,5 @@
 from utils.projection_hook import ProjectionHookMode
+from utils.projection_hook import TokenModificationMode
 from utils.projection_hook import DirectionNormalizationMode
 from utils.projection_hook import compute_projection
 
@@ -9,6 +10,7 @@ class ProjectionPostHookHuginn:
   def __init__(
     self,
     steering_mode: ProjectionHookMode,
+    modification_mode: TokenModificationMode,
     direction_normalization_mode: DirectionNormalizationMode,
     selected_depth_indices: list[int],
     feature_directions: dict[int, Float[Tensor, "n_embd"]],
@@ -17,9 +19,9 @@ class ProjectionPostHookHuginn:
   ):
     super().__init__()
     self.steering_mode = steering_mode
+    self.modification_mode = modification_mode
     self.direction_normalization_mode = direction_normalization_mode
     self.selected_depth_indices = selected_depth_indices
-    self.feature_directions = feature_directions
     self.feature_directions_normalized = {
       depth_index: direction / direction.norm(dim=-1)
       for depth_index, direction in feature_directions.items()
@@ -64,24 +66,64 @@ class ProjectionPostHookHuginn:
       match self.steering_mode:
         case ProjectionHookMode.FEATURE_AMPLIFICATION:
           feature_direction_normalized = self.feature_directions_normalized[depth_index]
-          overall_direction_magnitude = self.overall_direction_magnitude[depth_index] if self.overall_direction_magnitude else None
-          projection = compute_projection(
-            data=output[0],
-            direction_normalization_mode=self.direction_normalization_mode,
-            feature_direction_normalized=feature_direction_normalized,
-            overall_direction_magnitude=overall_direction_magnitude,
+          overall_direction_magnitude = (
+            self.overall_direction_magnitude[depth_index] 
+            if self.overall_direction_magnitude 
+            else None
           )
-          output[0][:, :, :] = output[0] + projection
+          match self.modification_mode:
+            case TokenModificationMode.LAST_TOKEN:
+              projection = compute_projection(
+                data=output[0][:, -1],
+                direction_normalization_mode=self.direction_normalization_mode,
+                feature_direction_normalized=feature_direction_normalized,
+                overall_direction_magnitude=overall_direction_magnitude,
+              )
+              output[0][:, -1] += projection
+            case TokenModificationMode.ALL_TOKENS:
+              projection = compute_projection(
+                data=output[0],
+                direction_normalization_mode=self.direction_normalization_mode,
+                feature_direction_normalized=feature_direction_normalized,
+                overall_direction_magnitude=overall_direction_magnitude,
+              )
+              output[0][:] += projection
+            case _:
+              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
         case ProjectionHookMode.FEATURE_ADDITION:
           feature_direction_normalized = self.feature_directions_normalized[depth_index]
-          output[0][:, :, :] = output[0] + (self.scale * feature_direction_normalized)
+          match self.modification_mode:
+            case TokenModificationMode.LAST_TOKEN:
+              output[0][:, -1] += self.scale * feature_direction_normalized
+            case TokenModificationMode.ALL_TOKENS:
+              output[0][:] += self.scale * feature_direction_normalized
+            case _:
+              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
         case ProjectionHookMode.FEATURE_ABLATION:
           feature_direction_normalized = self.feature_directions_normalized[depth_index]
-          overall_direction_magnitude = self.overall_direction_magnitude[depth_index] if self.overall_direction_magnitude else None
-          projection = compute_projection(
-            data=output[0],
-            direction_normalization_mode=self.direction_normalization_mode,
-            feature_direction_normalized=feature_direction_normalized,
-            overall_direction_magnitude=overall_direction_magnitude,
+          overall_direction_magnitude = (
+            self.overall_direction_magnitude[depth_index] 
+            if self.overall_direction_magnitude 
+            else None
           )
-          output[0][:, :, :] = output[0] - projection
+          match self.modification_mode:
+            case TokenModificationMode.LAST_TOKEN:
+              projection = compute_projection(
+                data=output[0][:, -1],
+                direction_normalization_mode=self.direction_normalization_mode,
+                feature_direction_normalized=feature_direction_normalized,
+                overall_direction_magnitude=overall_direction_magnitude,
+              )
+              output[0][:, -1] -= projection
+            case TokenModificationMode.ALL_TOKENS:
+              projection = compute_projection(
+                data=output[0],
+                direction_normalization_mode=self.direction_normalization_mode,
+                feature_direction_normalized=feature_direction_normalized,
+                overall_direction_magnitude=overall_direction_magnitude,
+              )
+              output[0][:] -= projection
+            case _:
+              raise ValueError(f"Unsupported token modification mode: {self.matching_mode}")
+        case _:
+          raise ValueError(f"Unsupported steering mode: {self.steering_mode}")

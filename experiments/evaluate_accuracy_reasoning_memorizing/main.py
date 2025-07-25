@@ -20,18 +20,25 @@ if False:
 
 from earm_utils import parse_args
 
-from utils import ProcessHiddenStatesMode
-from utils import DirectionNormalizationMode
-from utils import ProjectionHookMode
 from utils import enable_reproducibility
+
 from utils import load_model_and_tokenizer
+
 from utils import load_json_dataset
 from utils import compute_directions
+
 from utils import prepare_fewshot_prompts
 from utils import prepare_queries
+
+from utils import ProcessHiddenStatesMode
+
+from utils import DirectionNormalizationMode
+from utils import ProjectionHookMode
+from utils import TokenModificationMode
 from utils import ProjectionHookConfig
 from utils import ProjectionHookConfigLiReFs
 from utils import set_activations_hooks
+
 from utils import tokenize_text
 from utils import generate
 from utils import set_model_predict_correctness
@@ -47,9 +54,10 @@ if False:
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
   MODEL_NAME="huginn-0125"
-  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
-  DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
-  PROJECTION_HOOK_MODE = str(ProjectionHookMode.FEATURE_ADDITION)
+  PROCESS_HIDDEN_STATES_MODE = ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN
+  DIRECTION_NORMALIZATION_MODE = DirectionNormalizationMode.UNIT_VECTOR
+  PROJECTION_HOOK_MODE = ProjectionHookMode.FEATURE_ADDITION
+  MODIFICATION_MODE = TokenModificationMode.ALL_TOKENS
   sys.argv = [
     'main.py',
     '--models_path', f'{WORKSPACE_PATH}/transformers',
@@ -65,11 +73,14 @@ if False:
     '--batch_size', '1',
 
     '--with_intervention',
-    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
+    
+    '--process_hidden_states_mode', str(PROCESS_HIDDEN_STATES_MODE),
     '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
-    '--direction_normalization_mode', DIRECTION_NORMALIZATION_MODE,
-    '--projection_hook_mode', PROJECTION_HOOK_MODE,
+    
     '--layer_indices', '21',
+    '--direction_normalization_mode', str(DIRECTION_NORMALIZATION_MODE),
+    '--projection_hook_mode', str(PROJECTION_HOOK_MODE),
+    '--modification_mode', str(MODIFICATION_MODE),
     '--with_hidden_states_pre_hook',
     # '--with_hidden_states_post_hook',
     '--scale', '1.0',
@@ -215,6 +226,7 @@ if args['with_intervention']:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
         steering_mode=args['projection_hook_mode'],
+        modification_mode=args['modification_mode'],
         direction_normalization_mode=args['direction_normalization_mode'],
         layer_indices=args['layer_indices'],
         hidden_states_hooks_config={

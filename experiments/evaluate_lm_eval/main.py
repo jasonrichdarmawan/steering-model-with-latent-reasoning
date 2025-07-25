@@ -20,12 +20,15 @@ if False:
 
 from ele_utils import parse_args
 
+from utils import enable_reproducibility
+
+from utils import get_device_map
+from utils import ProcessHiddenStatesMode
+from utils import compute_directions
+
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
-from utils import ProcessHiddenStatesMode
-from utils import enable_reproducibility
-from utils import get_device_map
-from utils import compute_directions
+from utils import TokenModificationMode
 from utils import ProjectionHookConfig
 from utils import set_activations_hooks
 
@@ -50,6 +53,7 @@ if False:
   
   DIRECTION_NORMALIZATION_MODE = DirectionNormalizationMode.UNIT_VECTOR
   PROJECTION_HOOK_MODE = ProjectionHookMode.FEATURE_ADDITION
+  MODIFICATION_MODE = TokenModificationMode.LAST_TOKEN
   
   sys.argv = [
     'main.py',
@@ -72,12 +76,13 @@ if False:
     '--direction_normalization_mode', str(DIRECTION_NORMALIZATION_MODE),
     '--layer_indices', '31',
     '--projection_hook_mode', str(PROJECTION_HOOK_MODE),
+    '--modification_mode', str(MODIFICATION_MODE),
     # '--with_hidden_states_pre_hook',
     '--with_hidden_states_post_hook',
     '--scale', '1.0',
 
     '--tasks', 'mmlu',
-    '--num_fewshot', '0',
+    '--num_fewshot', '1',
     '--batch_size', '1',
     '--limit', '1',
     '--output_file_path', f'{WORKSPACE_PATH}/experiments/lm_eval_results/{MODEL_NAME}.json',
@@ -98,7 +103,7 @@ enable_reproducibility()
 
 match args["model_name"]:
   case "huginn-0125":
-    print(f"{args['model_name']} will use 2 GPUs for parallelization.")
+    # print(f"{args['model_name']} will use 2 GPUs for parallelization.")
     device_map = {
       "transformer.wte": 0,
       "freqs_cis": 0,
@@ -106,10 +111,10 @@ match args["model_name"]:
       "transformer.adapter": 0,
       "transformer.core_block.0": 0,
       "transformer.core_block.1": 0,
-      "transformer.core_block.2": 1,
-      "transformer.core_block.3": 1,
-      "transformer.coda": 1,
-      "transformer.ln_f": 1,
+      "transformer.core_block.2": 0,
+      "transformer.core_block.3": 0,
+      "transformer.coda": 0,
+      "transformer.ln_f": 0,
       "lm_head": 0,
     }
   case _:
@@ -210,6 +215,7 @@ if args['with_intervention']:
     case "huginn_raven":
       projection_hook_config = ProjectionHookConfig(
         steering_mode=args['projection_hook_mode'],
+        modification_mode=args['modification_mode'],
         direction_normalization_mode=args['direction_normalization_mode'],
         layer_indices=args['layer_indices'],
         hidden_states_hooks_config={

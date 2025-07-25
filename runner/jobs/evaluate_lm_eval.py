@@ -1,6 +1,7 @@
 from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
+from utils import TokenModificationMode
 
 shell = """\
 WORKSPACE_PATH={workspace_path}
@@ -25,6 +26,7 @@ python experiments/evaluate_lm_eval/main.py \
 {layer_indices_arg} \
 {direction_normalization_mode_arg} \
 {projection_hook_mode_arg} \
+{modification_mode_arg} \
 {with_hidden_states_pre_hook_flag} \
 {with_hidden_states_post_hook_flag} \
 {scale_arg} \
@@ -51,6 +53,7 @@ def get_evaluate_lm_eval(
   direction_normalization_mode: DirectionNormalizationMode | None = None,
   layer_indices: list[int] | None = False,
   projection_hook_mode: ProjectionHookMode | None = None,
+  modification_mode: TokenModificationMode | None = None,
   with_hidden_states_pre_hook: bool = False,
   with_hidden_states_post_hook: bool = False,
   scale: float | None = None,
@@ -86,6 +89,7 @@ def get_evaluate_lm_eval(
   process_hidden_states_mode_arg = (
     f"--process_hidden_states_mode {process_hidden_states_mode}" 
     if with_intervention and use_candidate_directions
+    and process_hidden_states_mode
     else ""
   )
   candidate_directions_file_path_arg = (
@@ -96,27 +100,32 @@ def get_evaluate_lm_eval(
 
   layer_indices_arg = (
     "--layer_indices " + " ".join(map(str, layer_indices)) 
-    if layer_indices 
+    if with_intervention and layer_indices 
     else ""
   )
   direction_normalization_mode_arg = (
     f"--direction_normalization_mode {direction_normalization_mode}" 
-    if with_intervention 
+    if with_intervention and direction_normalization_mode 
     else ""
   )
   projection_hook_mode_arg = (
     f"--projection_hook_mode {projection_hook_mode}" 
-    if with_intervention 
+    if with_intervention and projection_hook_mode 
+    else ""
+  )
+  modification_mode_arg = (
+    f"--modification_mode {modification_mode}"
+    if with_intervention and modification_mode
     else ""
   )
   with_hidden_states_pre_hook_flag = (
     "--with_hidden_states_pre_hook" 
-    if with_hidden_states_pre_hook 
+    if with_intervention and with_hidden_states_pre_hook 
     else ""
   )
   with_hidden_states_post_hook_flag = (
     "--with_hidden_states_post_hook" 
-    if with_hidden_states_post_hook 
+    if with_intervention and with_hidden_states_post_hook 
     else ""
   )
   scale_arg = (
@@ -147,6 +156,7 @@ def get_evaluate_lm_eval(
     layer_indices_arg=layer_indices_arg,
     direction_normalization_mode_arg=direction_normalization_mode_arg,
     projection_hook_mode_arg=projection_hook_mode_arg,
+    modification_mode_arg=modification_mode_arg,
     with_hidden_states_pre_hook_flag=with_hidden_states_pre_hook_flag,
     with_hidden_states_post_hook_flag=with_hidden_states_post_hook_flag,
     scale_arg=scale_arg,

@@ -1,5 +1,6 @@
 from .hook_config import *
 from .projection_hook_mode import *
+from .token_modification_mode import *
 from .direction_normalization_mode import *
 from .compute_projection import *
 from .projection_hook_config import *
