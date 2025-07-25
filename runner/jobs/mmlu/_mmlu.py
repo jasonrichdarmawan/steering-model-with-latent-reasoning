@@ -18,7 +18,7 @@ def get_mmlu(
       with_intervention=False,
     )
     commands.append(command)
-  if job == "mmlu" or job == "mmlu_pro_evaluate_lm_eval_few_shots_1":
+  if job == "mmlu" or job == "mmlu_evaluate_lm_eval_few_shots_1":
     command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
       model_name="huginn-0125",

@@ -136,10 +136,10 @@ python runner/main.py \
 
 Jobs:
 - mmlu_pro_evaluate_lm_eval
-- mmlu_pro_evaluate_lm_eval_few_shots_1
 - mmlu_pro_evaluate_lm_eval_with_intervention
 - mmlu_pro_evaluate_lm_eval_with_intervention_129
 - mmlu_evaluate_lm_eval
+- mmlu_evaluate_lm_eval_few_shots_1
 - mmlu_evaluate_lm_eval_with_intervention
 - mmlu_evaluate_lm_eval_with_intervention_scale_with_overall_magnitude_feature_amplification
 - mmlu_evaluate_lm_eval_with_intervention_1
