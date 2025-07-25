@@ -18,6 +18,15 @@ def get_mmlu(
       with_intervention=False,
     )
     commands.append(command)
+  if job == "mmlu" or job == "mmlu_pro_evaluate_lm_eval_few_shots_1":
+    command = get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      tasks="mmlu",
+      with_intervention=False,
+      num_fewshot=1,
+    )
+    commands.append(command)
   if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention":
     command = get_evaluate_lm_eval(
       workspace_path=workspace_path,
@@ -142,6 +151,25 @@ def get_mmlu(
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
       scale=1.0,
+    )
+    commands.append(command)
+  if job == "mmlu" or job == "mmlu_evaluate_lm_eval_with_intervention_use_linear_probes_few_shots_1":
+    command = get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      tasks="mmlu",
+      with_intervention=True,
+      
+      use_linear_probes=True,
+      
+      layer_indices=[31],
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+      scale=1.0,
+
+      num_fewshot=1,
     )
     commands.append(command)
   

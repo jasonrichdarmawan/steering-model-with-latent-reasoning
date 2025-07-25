@@ -30,7 +30,7 @@ python experiments/evaluate_lm_eval/main.py \
 {scale_arg} \
 \
 --tasks {tasks} \
---num_fewshot 0 \
+{num_fewshot_arg} \
 --batch_size auto \
 \
 --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/{model_name}.json"
@@ -41,6 +41,7 @@ def get_evaluate_lm_eval(
   model_name: str,
   tasks: str,
   with_intervention: bool,
+  num_fewshot: int = 0,
   
   use_linear_probes: bool = False,
 
@@ -124,6 +125,8 @@ def get_evaluate_lm_eval(
     else ""
   )
 
+  num_fewshot_arg = f"--num_fewshot {num_fewshot}"
+
   return shell.format(
     workspace_path=workspace_path,
     model_name=model_name,
@@ -147,4 +150,6 @@ def get_evaluate_lm_eval(
     with_hidden_states_pre_hook_flag=with_hidden_states_pre_hook_flag,
     with_hidden_states_post_hook_flag=with_hidden_states_post_hook_flag,
     scale_arg=scale_arg,
+
+    num_fewshot_arg=num_fewshot_arg,
   )
