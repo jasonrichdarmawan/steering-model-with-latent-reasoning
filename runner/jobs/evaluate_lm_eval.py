@@ -1,4 +1,3 @@
-from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import TokenModificationMode
@@ -39,6 +38,62 @@ python experiments/evaluate_lm_eval/main.py \
 --output_file_path "$WORKSPACE_PATH/experiments/lm_eval_results/{model_name}.json"
 """
 
+def handle_evaluate_lm_eval(
+  workspace_path: str,
+  job: str,
+) -> str:
+  if job == "evaluate_lm_eval_model_name_Meta-Llama-3-8B":
+    return get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      tasks="mmlu",
+      with_intervention=False,
+    )
+  elif job == "evaluate_lm_eval_model_name_Meta-Llama-3-8B_with_intervention_user_linear_probes":
+    return get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      tasks="mmlu",
+      with_intervention=True,
+      
+      use_linear_probes=True,
+      
+      layer_indices=[12],
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+      scale=1.0,
+    )
+  elif job == "evaluate_lm_eval_tasks_piqa":
+    return get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      tasks="piqa",
+      num_fewshot=0,
+      with_intervention=False,
+    )
+  elif job == "evaluate_lm_eval_tasks_piqa_use_linear_probes":
+    return get_evaluate_lm_eval(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      tasks="piqa",
+      num_fewshot=0,
+
+      with_intervention=True,
+      
+      use_linear_probes=True,
+
+      layer_indices=[31],
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+      projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
+      modification_mode=TokenModificationMode.LAST_TOKEN,
+      with_hidden_states_pre_hook=False,
+      with_hidden_states_post_hook=True,
+      scale=1.0,
+    )
+
 def get_evaluate_lm_eval(
   workspace_path: str,
   model_name: str,
@@ -49,7 +104,6 @@ def get_evaluate_lm_eval(
   use_linear_probes: bool = False,
 
   use_candidate_directions: bool = False,
-  process_hidden_states_mode: ProcessHiddenStatesMode | None = None,
 
   direction_normalization_mode: DirectionNormalizationMode | None = None,
   layer_indices: list[int] | None = False,
@@ -87,14 +141,8 @@ def get_evaluate_lm_eval(
     if with_intervention and use_candidate_directions 
     else ""
   )
-  process_hidden_states_mode_arg = (
-    f"--process_hidden_states_mode {process_hidden_states_mode}" 
-    if with_intervention and use_candidate_directions
-    and process_hidden_states_mode
-    else ""
-  )
   candidate_directions_file_path_arg = (
-    f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\"" 
+    f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/candidate_directions_FIRST_ANSWER_TOKEN.pt\"" 
     if with_intervention and use_candidate_directions 
     else ""
   )
@@ -151,7 +199,6 @@ def get_evaluate_lm_eval(
     linear_probes_file_path_arg=linear_probes_file_path_arg,
     
     use_candidate_directions_flag=use_candidate_directions_flag,
-    process_hidden_states_mode_arg=process_hidden_states_mode_arg,
     candidate_directions_file_path_arg=candidate_directions_file_path_arg,
     
     layer_indices_arg=layer_indices_arg,

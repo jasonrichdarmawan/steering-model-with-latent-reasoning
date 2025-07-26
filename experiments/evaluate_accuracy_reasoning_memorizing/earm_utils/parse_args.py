@@ -1,4 +1,3 @@
-from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import TokenModificationMode
@@ -9,6 +8,8 @@ import argparse
 class Args(TypedDict):
   models_path: str
   model_name: str
+
+  device: str | None
 
   huginn_num_steps: int | None
 
@@ -21,7 +22,6 @@ class Args(TypedDict):
 
   with_intervention: bool
 
-  process_hidden_states_mode: ProcessHiddenStatesMode | None
   candidate_directions_file_path: str | None
 
   layer_indices: list[int] | None
@@ -48,6 +48,13 @@ def parse_args() -> Args:
     '--model_name', 
     help="Folder name of the specific model to load from the root directory",
     type=str,
+  )
+
+  parser.add_argument(
+    '--device',
+    help="Device to run the evaluation on (e.g., 'cuda:0', 'cpu')",
+    type=str,
+    default=None,
   )
   
   parser.add_argument(
@@ -93,13 +100,6 @@ def parse_args() -> Args:
     '--with_intervention',
     action="store_true",
     help="Whether to apply the intervention for reasoning and memorization accuracy evaluation"
-  )
-  parser.add_argument(
-    '--process_hidden_states_mode',
-    type=ProcessHiddenStatesMode,
-    choices=list(ProcessHiddenStatesMode),
-    help='Mode for processing hidden states during the experiment.',
-    default=None,
   )
   parser.add_argument(
     '--candidate_directions_file_path',

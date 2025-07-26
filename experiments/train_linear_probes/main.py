@@ -38,12 +38,16 @@ from typing import TypedDict
 if False:
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
+
+  MODEL_NAME = "huginn-0125"
+
   sys.argv = [
     'main.py',
 
+    '--model_name', MODEL_NAME,
     '--device', 'cuda:0',
 
-    '--hidden_states_file_path', f'{WORKSPACE_PATH}/experiments/save_hidden_states/huginn-0125_hidden_states_FIRST_ANSWER_TOKEN.pt',
+    '--hidden_states_file_path', f'{WORKSPACE_PATH}/experiments/save_hidden_states/{MODEL_NAME}_hidden_states_FIRST_ANSWER_TOKEN.pt',
     
     '--epochs', '1000',
 
@@ -57,7 +61,7 @@ if False:
     # '--moving_average_window_size_step', '50',
     # '--moving_average_window_size_epoch', '1',
 
-    '--output_dir', f'{WORKSPACE_PATH}/experiments/train_linear_probes',
+    '--output_dir', f'{WORKSPACE_PATH}/experiments/train_linear_probes/{MODEL_NAME}',
     '--checkpoint_freq', '50',
     '--use_early_stopping', 
     '--early_stopping_patience', '10',
@@ -78,7 +82,7 @@ enable_reproducibility()
 # %%
 
 print("Loading hidden states from file.")
-hidden_states: SaveHiddenStatesOutput = t.load(
+hidden_states_output: SaveHiddenStatesOutput = t.load(
   args['hidden_states_file_path'],
   map_location='cpu',
   weights_only=False,
@@ -87,7 +91,7 @@ hidden_states: SaveHiddenStatesOutput = t.load(
 # %%
 
 x = t.stack(
-  [t.stack(hs) for _, hs in hidden_states['hidden_states'].items()],
+  [t.stack(hs) for _, hs in hidden_states_output['hidden_states'].items()],
 )
 x = einops.rearrange(
   x,
@@ -99,7 +103,7 @@ label_to_idx = {
   SaveHiddenStatesQueryLabel.MEMORIZING.value: 1,
 }
 y = t.tensor(
-  [label_to_idx[label] for label in hidden_states['labels']],
+  [label_to_idx[label] for label in hidden_states_output['labels']],
 )
 
 num_samples = args['sample_size'] or x.shape[0]
@@ -122,7 +126,7 @@ del label_to_idx
 
 # %%
 
-del hidden_states
+del hidden_states_output
 
 # %%
 
@@ -582,7 +586,7 @@ axes[1].grid(True)
 for plot_idx in range(2, n_plots):
   ax = axes[plot_idx]
 
-  start_layer_index = (plot_idx - 1) * layers_per_plot
+  start_layer_index = (plot_idx - 2) * layers_per_plot
   end_layer_index = min(start_layer_index + layers_per_plot, n_layers)
   for layer_index in range(start_layer_index, end_layer_index):
     smoothed_train_losses_per_layer = compute_moving_average(
@@ -725,7 +729,7 @@ axes[1].grid(True)
 for plot_idx in range(2, n_plots):
   ax = axes[plot_idx]
 
-  start_layer_index = (plot_idx - 1) * layers_per_plot
+  start_layer_index = (plot_idx - 2) * layers_per_plot
   end_layer_index = min(start_layer_index + layers_per_plot, n_layers)
   for layer_index in range(start_layer_index, end_layer_index):
     smoothed_train_losses_per_epoch_per_layer = compute_moving_average(

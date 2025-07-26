@@ -1,10 +1,8 @@
-from utils import CacheHiddenStatesMode
-from utils import DirectionNormalizationMode
-from utils import ProjectionHookMode
-from utils import TokenModificationMode
-
-from jobs import get_save_hidden_states
-from jobs import get_evaluate_lm_eval
+from jobs import handle_save_hidden_states
+from jobs import handle_save_candidate_directions
+from jobs import handle_train_linear_probes
+from jobs import handle_evaluate_accuracy_reasoning_memorizing
+from jobs import handle_evaluate_lm_eval
 from jobs import get_mmlu
 from jobs import get_mmlu_pro
 
@@ -15,40 +13,34 @@ def set_up_experiments(
   experiments = []
 
   for job in jobs:
-    if job == "save_hidden_states":
-      command = get_save_hidden_states(
+    if job.startswith("save_hidden_states"):
+      command = handle_save_hidden_states(
         workspace_path=workspace_path,
-        model_name="huginn-0125",
-        cache_hidden_states_mode=CacheHiddenStatesMode.FIRST_ANSWER_TOKEN,
+        job=job,
       )
       experiments.append([command])
-    elif job == "evaluate_lm_eval_tasks_piqa":
-      command = get_evaluate_lm_eval(
+    elif job.startswith("save_candidate_directions"):
+      command = handle_save_candidate_directions(
         workspace_path=workspace_path,
-        model_name="huginn-0125",
-        tasks="piqa",
-        num_fewshot=0,
-        with_intervention=False,
+        job=job,
       )
       experiments.append([command])
-    elif job == "evaluate_lm_eval_tasks_piqa_use_linear_probes":
-      command = get_evaluate_lm_eval(
+    elif job.startswith("train_linear_probes"):
+      command = handle_train_linear_probes(
         workspace_path=workspace_path,
-        model_name="huginn-0125",
-        tasks="piqa",
-        num_fewshot=0,
-
-        with_intervention=True,
-        
-        use_linear_probes=True,
-
-        layer_indices=[31],
-        direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
-        projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-        modification_mode=TokenModificationMode.LAST_TOKEN,
-        with_hidden_states_pre_hook=False,
-        with_hidden_states_post_hook=True,
-        scale=1.0,
+        job=job,
+      )
+      experiments.append([command])
+    elif job.startswith("evaluate_accuracy_reasoning_memorizing"):
+      command = handle_evaluate_accuracy_reasoning_memorizing(
+        workspace_path=workspace_path,
+        job=job,
+      )
+      experiments.append([command])
+    elif job.startswith("evaluate_lm_eval"):
+      command = handle_evaluate_lm_eval(
+        workspace_path=workspace_path,
+        job=job,
       )
       experiments.append([command])
     elif job.startswith("mmlu_pro"):

@@ -21,44 +21,31 @@ if False:
 from scd_utils import parse_args
 
 from utils import enable_reproducibility
-from utils import load_model_and_tokenizer
-from utils import load_json_dataset
-from utils import prepare_queries
-from utils import CandidateDirectionStats
-from utils import ProcessHiddenStatesMode
-from utils import tokenize_text
-from utils import get_hidden_states
-from utils import process_hidden_states
-from utils import generate
-from utils import convert_defaultdict_to_dict
-from utils import compute_candidate_directions
+from utils import SaveHiddenStatesOutput
+from utils import SaveHiddenStatesQueryLabel
 
-import torch
-from collections import defaultdict
-from tqdm import tqdm
+import torch as t
+from torch import Tensor
+import torch.nn.functional as F
+from jaxtyping import Float
+import matplotlib.pyplot as plt
 
 # %%
 
 if False:
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
-  PROCESS_HIDDEN_STATES_MODE = str(ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN)
   sys.argv = [
     'main.py',
-    '--models_path', f'{WORKSPACE_PATH}/transformers',
-    '--model_name', 'huginn-0125',
+    '--device', 'cuda:0',
 
-    '--device_map', 'cuda:0',
+    '--models_name', 
+    'Meta-Llama-3-8B',
+    'huginn-0125',
 
-    '--huginn_num_steps', '32',
-
-    '--data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
-    '--data_name', 'mmlu-pro-3000samples.json',
-
-    '--data_sample_size', '24',
-    '--data_batch_size', '1',
-
-    '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
+    '--hidden_states_file_paths', 
+    f'{WORKSPACE_PATH}/experiments/save_hidden_states/Meta-Llama-3-8B_hidden_states_FIRST_ANSWER_TOKEN.pt',
+    f'{WORKSPACE_PATH}/experiments/save_hidden_states/huginn-0125_hidden_states_FIRST_ANSWER_TOKEN.pt',
 
     '--output_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions',
   ]
@@ -76,239 +63,257 @@ enable_reproducibility()
 
 # %%
 
-model, tokenizer = load_model_and_tokenizer(
-  models_path=args['models_path'],
-  model_name=args['model_name'],
-  device_map=args['device_map'],
-)
-
-# %%
-
-if args['data_name'].endswith('mmlu-pro-3000samples.json'):
-  print(f"Loading dataset from JSON file {args['data_path']}/{args['data_name']} and sample size {args['data_sample_size']}")
-  sampled_data = load_json_dataset(
-    file_path=os.path.join(args['data_path'], args['data_name']),
-    sample_size=args['data_sample_size'],
-  )
-else:
-  raise ValueError(
-    f"Unsupported data name: {args['data_name']}. "
-    "Currently only JSON files are supported."
+print("Loading hidden states from file.")
+hs_dict: dict[str, SaveHiddenStatesOutput] = {}
+for model_name, hidden_states_file_path in zip(
+  args['models_name'],
+  args['hidden_states_file_paths'],
+):
+  print(f"Loading hidden states for model: {model_name} from {hidden_states_file_path}")
+  
+  # Load the hidden states output
+  hs_dict[model_name] = t.load(
+    hidden_states_file_path,
+    map_location="cpu",
+    weights_only=False,
   )
 
 # %%
 
-print("Computing memory reasoning scores for the sampled data.")
-reasoning_indices = [
-  index for index, sample in enumerate(sampled_data) 
-  if sample['memory_reason_score'] > 0.5
-]
-memorizing_indices = [
-  index for index, sample in enumerate(sampled_data) 
-  if sample['memory_reason_score'] <= 0.5
-]
-
-reasoning_indices_batched = [
-  reasoning_indices[i:i + args['data_batch_size']]
-  for i in range(
-    0, len(reasoning_indices), args['data_batch_size']
-  )
-]
-
-memorizing_indices_batched = [
-  memorizing_indices[i:i + args['data_batch_size']]
-  for i in range(
-    0, len(memorizing_indices), args['data_batch_size']
-  )
-]
-
-del reasoning_indices
-del memorizing_indices
+print("Collecting reasoning and memorizing indices.")
+reasoning_indices_dict: dict[str, list[int]] = {}
+memorizing_indices_dict: dict[str, list[int]] = {}
+for model_name, hs_output in hs_dict.items():
+  print(f"Processing model: {model_name}")
+  
+  # Collect reasoning and memorizing indices
+  reasoning_indices_dict[model_name] = [
+    i for i, label in enumerate(hs_output['labels']) 
+    if label == SaveHiddenStatesQueryLabel.REASONING.value
+  ]
+  memorizing_indices_dict[model_name] = [
+    i for i, label in enumerate(hs_output['labels'])
+    if label == SaveHiddenStatesQueryLabel.MEMORIZING.value
+  ]
 
 # %%
 
-print("Preparing queries for the model.")
-queries = prepare_queries(
-  model_name=model.config.model_type,
-  data=sampled_data,
-  data_name=args['data_name'],
-  tokenizer=tokenizer,
-  apply_chat_template=False,
-  system_prompt=None,
-  fewshot_prompts=None,
-  with_cot=False,
-  with_options=False,
-)
+print("Computing candidate directions.")
+candidate_directions_dict: dict[str, dict[str, list[Float[Tensor, "n_embd"]]]] = {}
+for model_name, hs_output in hs_dict.items():
+  print(f"Computing candidate directions for model: {model_name}")
+  candidate_directions_dict[model_name] = {
+    "reasoning": [],
+    "memorizing": [],
+    "layer with the highest cosine similarity": {}
+  }
+  for layer_index, hs in hs_output['hidden_states'].items():
+    hs_tensor = t.stack(hs, dim=0)
 
-queries_reasoning_batched: list[list[str]] = [
-  [] for _ in range(len(reasoning_indices_batched))
-]
-for batch_index, reasoning_indices_batch in enumerate(reasoning_indices_batched):
-  for query_index in reasoning_indices_batch:
-    queries_reasoning_batched[batch_index].append(queries[query_index])
-
-queries_memorizing_batched = [
-  [] for _ in range(len(memorizing_indices_batched))
-]
-for batch_index, memorizing_indices_batch in enumerate(memorizing_indices_batched):
-  for query_index in memorizing_indices_batch:
-    queries_memorizing_batched[batch_index].append(queries[query_index])
-
-del queries
-
-# %
-
-del sampled_data
-
-# %%
-
-candidate_directions: defaultdict[str, CandidateDirectionStats] = None
-print("Computing candidate directions for reasoning and memorizing indices.")
-match args['process_hidden_states_mode']:
-  case ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN:
-    def process(
-      queries_batched: list[list[str]], 
-      label: str,
-      candidate_directions: defaultdict[str, CandidateDirectionStats] | None,
-    ):
-      for queries_batch in tqdm(queries_batched):
-        inputs = tokenize_text(
-          model=model,
-          tokenizer=tokenizer,
-          text=queries_batch,
-        )
-
-        with torch.no_grad():
-          hidden_states = get_hidden_states(
-            model=model,
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-          )
-
-        # Processing hidden states
-        processed_hidden_states = process_hidden_states(
-          model=model,
-          mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
-          hidden_states=hidden_states,
-        )
-
-        # Computing candidate directions for reasoning and memorizing indices.
-        candidate_directions = compute_candidate_directions(
-          model=model,
-          hidden_states=processed_hidden_states,
-          label=label,
-          candidate_directions=candidate_directions,
-        )
-
-        del inputs
-        del hidden_states
-        del processed_hidden_states
-        torch.cuda.empty_cache()
-      
-      return candidate_directions
+    reasoning_indices = reasoning_indices_dict[model_name]
+    memorizing_indices = memorizing_indices_dict[model_name]
     
-    candidate_directions = process(
-      queries_batched=queries_reasoning_batched, 
-      label="reasoning",
-      candidate_directions=candidate_directions,
-    )
-    candidate_directions = process(
-      queries_batched=queries_memorizing_batched, 
-      label="memorizing",
-      candidate_directions=candidate_directions,
-    )
-  case ProcessHiddenStatesMode.ALL_TOKENS:
-    def process(
-      queries_batched: list[list[str]],
-      label: str,
-      candidate_directions: defaultdict[str, CandidateDirectionStats] | None,
-    ):
-      for queries_batch in tqdm(queries_batched):
-        inputs = tokenize_text(
-          model=model,
-          tokenizer=tokenizer,
-          text=queries_batch,
-        )
+    hs_reasoning = hs_tensor[reasoning_indices].to(dtype=t.float64)
+    hs_memorizing = hs_tensor[memorizing_indices].to(dtype=t.float64)
 
-        with torch.no_grad():
-          outputs = generate(
-            model=model,
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-            tokenizer=tokenizer,
-            huginn_num_steps=args.get('huginn_num_steps', 32),
-          )
-
-        responses = tokenizer.batch_decode(
-          outputs,
-          skip_special_tokens=True,
-        )
-
-        # Process hidden states for the responses
-        inputs = tokenize_text(
-          model=model,
-          tokenizer=tokenizer,
-          text=responses,
-        )
-
-        with torch.no_grad():
-          hidden_states = get_hidden_states(
-            model=model,
-            input_ids=inputs["input_ids"],
-            attention_mask=inputs["attention_mask"],
-          )
-
-        # Processing hidden states
-        processed_hidden_states = process_hidden_states(
-          model=model,
-          mode=ProcessHiddenStatesMode.ALL_TOKENS,
-          hidden_states=hidden_states,
-          attention_mask=inputs["attention_mask"],
-        )
-
-        # Computing candidate directions for reasoning and memorizing indices
-        candidate_directions = compute_candidate_directions(
-          model=model,
-          hidden_states=processed_hidden_states,
-          label=label,
-          candidate_directions=candidate_directions,
-        )
-
-        del inputs
-        del outputs
-        del responses
-        del hidden_states
-        del processed_hidden_states
-        torch.cuda.empty_cache()
-
-      return candidate_directions
-    
-    candidate_directions = process(
-      queries_batched=queries_reasoning_batched, 
-      label="reasoning",
-      candidate_directions=candidate_directions,
-    )
-    candidate_directions = process(
-      queries_batched=queries_memorizing_batched,
-      label="memorizing",
-      candidate_directions=candidate_directions,
-    )
-  case _:
-    raise ValueError(f"Unsupported cache hidden states mode: {args['process_hidden_states_mode']}")
+    candidate_directions_dict[model_name]["reasoning"].append(hs_reasoning.mean(dim=0))
+    candidate_directions_dict[model_name]["memorizing"].append(hs_memorizing.mean(dim=0))
 
 # %%
 
-print("Converting candidate directions from defaultdict to dict.")
-candidate_directions = convert_defaultdict_to_dict(candidate_directions)
+directions: dict[
+  str, 
+  dict[str, list[Float[Tensor, "n_embd"]]]
+] = {}
+for model_name, candidate_directions in candidate_directions_dict.items():
+  print(f"Computing directions for model: {model_name}")
+  directions[model_name] = {
+    "reasoning direction": [],
+    "memorizing direction": [],
+  }
+  for layer_index in range(len(candidate_directions["reasoning"])):
+    reasoning_direction = candidate_directions["reasoning"][layer_index]
+    memorizing_direction = candidate_directions["memorizing"][layer_index]
+    
+    directions[model_name]["reasoning direction"].append(
+      reasoning_direction - memorizing_direction
+    )
+    directions[model_name]["memorizing direction"].append(
+      memorizing_direction - reasoning_direction
+    )
+
+# %%
+
+print("Computing cosine similarities between hidden states and candidate directions.")
+cos_sim_dict: dict[
+  str, 
+  dict[
+    str, 
+    dict[str, list[Float[Tensor, "batch_size"]]]
+  ]
+] = {}
+for model_name, hs_output in hs_dict.items():
+  cos_sim_dict[model_name] = {
+    "reasoning direction": {
+      "reasoning set": [],
+      "memorizing set": [],
+    },
+    "memorizing direction": {
+      "reasoning set": [],
+      "memorizing set": [],
+    },
+  }
+  for layer_index, hs in hs_output['hidden_states'].items():
+    """
+    ```python
+    hs_reasoning = t.tensor(
+      [
+        [0,1],
+        [1,0]
+      ], 
+      dtype=t.float32
+    )
+    candidate_direction = t.tensor([0,1], dtype=t.float32)
+
+    F.cosine_similarity(x1=hs_reasoning, x2=candidate_direction.unsqueeze(0), dim=-1)
+    ```
+    """
+    hs_tensor = t.stack(hs, dim=0)
+
+    hs_reasoning = hs_tensor[reasoning_indices]
+    hs_memorizing = hs_tensor[memorizing_indices]
+
+    cos_sim_dict[model_name]["reasoning direction"]["reasoning set"].append(F.cosine_similarity(
+      hs_reasoning,
+      directions[model_name]["reasoning direction"][layer_index].unsqueeze(0),
+      dim=-1,
+    ))
+    cos_sim_dict[model_name]["reasoning direction"]["memorizing set"].append(F.cosine_similarity(
+      hs_memorizing,
+      directions[model_name]["reasoning direction"][layer_index].unsqueeze(0),
+      dim=-1,
+    ))
+
+    cos_sim_dict[model_name]["memorizing direction"]["reasoning set"].append(F.cosine_similarity(
+      hs_reasoning,
+      directions[model_name]["memorizing direction"][layer_index].unsqueeze(0),
+      dim=-1,
+    ))
+    cos_sim_dict[model_name]["memorizing direction"]["memorizing set"].append(F.cosine_similarity(
+      hs_memorizing,
+      directions[model_name]["memorizing direction"][layer_index].unsqueeze(0),
+      dim=-1,
+    ))
+
+  def get_layer_index(
+    cos_sim: list[Float[Tensor, "batch_size"]]
+  ) -> int:
+    return max(
+      range(len(cos_sim)), 
+      key=lambda i: t.mean(cos_sim[i]).item()
+    )
+
+  print(f"Model {model_name}")
+  res_res = get_layer_index(cos_sim_dict[model_name]['reasoning direction']['reasoning set'])
+  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['reasoning direction @ reasoning set'] = res_res
+  print(f"Reasoning direction @ Reasoning set: Layer {res_res}")
+
+  res_mem = get_layer_index(cos_sim_dict[model_name]['reasoning direction']['memorizing set'])
+  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['reasoning direction @ memorizing set'] = res_mem
+  print(f"Reasoning direction @ Memorizing set: Layer {res_mem}")
+
+  mem_res = get_layer_index(cos_sim_dict[model_name]['memorizing direction']['reasoning set'])
+  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['memorizing direction @ reasoning set'] = mem_res
+  print(f"Memorizing direction @ Reasoning set: Layer {mem_res}")
+
+  mem_mem = get_layer_index(cos_sim_dict[model_name]['memorizing direction']['memorizing set'])
+  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['memorizing direction @ memorizing set'] = mem_mem
+  print(f"Memorizing direction @ Memorizing set: Layer {get_layer_index(cos_sim_dict[model_name]['memorizing direction']['memorizing set'])}")
 
 # %%
 
 os.makedirs(args['output_path'], exist_ok=True)
 candidate_directions_file_path = os.path.join(
   args['output_path'],
-  f"{args['model_name']}_{args['data_name']}_{args['process_hidden_states_mode']}_candidate_directions.pt"
+  f"candidate_directions_FIRST_ANSWER_TOKEN.pt"
 )
 print(f"Saving candidate directions to {candidate_directions_file_path}")
-torch.save(candidate_directions, candidate_directions_file_path)
+t.save(
+  candidate_directions_dict, 
+  candidate_directions_file_path
+)
+
+# %%
+
+nrows = 1
+ncols = len(cos_sim_dict)
+
+fig, axes = plt.subplots(
+  nrows=nrows,
+  ncols=ncols,
+  figsize=(6.48 * ncols * 1.5, 4.8 * nrows * 1.5),
+)
+axes = axes.flatten()
+
+for ax, (model_name, cos_sim) in zip(axes, cos_sim_dict.items()):
+
+  def plot(
+    ax, 
+    cos_sim: list[Float[Tensor, "batch_size"]],
+    label: str
+  ):
+    cos_sim_tensor = t.stack(cos_sim)
+    mean = cos_sim_tensor.mean(dim=-1)
+    std = cos_sim_tensor.std(dim=-1)
+
+    layers = list(range(cos_sim_tensor.shape[0]))
+
+    ax.plot(
+      layers, 
+      mean, 
+      label=label,
+    )
+    ax.fill_between(
+      x=layers, 
+      y1=mean - std, 
+      y2=mean + std,
+      alpha=0.2,
+    )
+  
+  plot(
+    ax,
+    cos_sim['reasoning direction']['reasoning set'],
+    label="Reasoning direction @ Reasoning Set",
+  )
+  plot(
+    ax,
+    cos_sim['reasoning direction']['memorizing set'],
+    label="Reasoning direction @ Memorizing Set",
+  )
+  plot(
+    ax,
+    cos_sim['memorizing direction']['reasoning set'],
+    label="Memorizing direction @ Reasoning Set",
+  )
+  plot(
+    ax,
+    cos_sim['memorizing direction']['memorizing set'],
+    label="Memorizing direction @ Memorizing Set",
+  )
+
+  ax.set_xlabel("Layer Index")
+  ax.set_ylabel("Cosine Similarity")
+  ax.set_title(model_name)
+  ax.grid(True)
+  ax.legend()
+
+# %%
+
+cosine_similarities_plot_path = os.path.join(
+  args['output_path'],
+  f"cosine_similarities_FIRST_ANSWER_TOKEN.png"
+)
+fig.savefig(cosine_similarities_plot_path, bbox_inches='tight')
+print(f"Cosine similarities plot saved to {cosine_similarities_plot_path}")
 
 # %%

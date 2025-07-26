@@ -14,4 +14,4 @@ class SaveHiddenStatesOutput(TypedDict):
   queries: list[str]
   query_token_lengths: list[int]
   labels: list[SaveHiddenStatesQueryLabel]
-  hidden_states: dict[int, list[Float[t.Tensor, "seq_len n_embd"]]]
+  hidden_states: dict[int, list[Float[t.Tensor, "n_embd"]]]

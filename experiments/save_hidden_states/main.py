@@ -136,13 +136,18 @@ for index, query in queries_with_idx:
     'label': label,
     'query': query,
   })
-queries_sorted = sorted(queries_with_label, key=lambda x: len(x['query']), reverse=True)
+queries_sorted = sorted(
+  queries_with_label, 
+  key=lambda x: len(x['query']), 
+  reverse=True
+)
 
 del queries_with_idx
 del queries_with_label
 
 # %%
 
+print("Preparing queries for batching")
 queries_batched = [
   queries_sorted[i:i + args['data_batch_size']]
   for i in range(0, len(queries_sorted), args['data_batch_size'])

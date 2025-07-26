@@ -1,4 +1,5 @@
 from utils.projection_hook import ProjectionHookMode
+from utils.projection_hook import TokenModificationMode
 from utils.projection_hook import DirectionNormalizationMode
 from utils.projection_hook import compute_projection
 
@@ -8,14 +9,19 @@ from torch import Tensor
 from enum import Enum
 
 class ProjectionPostHookLiReFsModuleType(Enum):
+  HIDDEN_STATES = "HIDDEN_STATES" # Hidden states of the model
   ATTENTION = "ATTENTION" # Attention module
   MLP = "MLP" # Multilayer Perceptron
+
+  def __str__(self):
+    return self.value
 
 class ProjectionPostHookLiReFs:
   def __init__(
     self,
     hook_type: ProjectionPostHookLiReFsModuleType,
     steering_mode: ProjectionHookMode,
+    modification_mode: TokenModificationMode,
     direction_normalization_mode: DirectionNormalizationMode,
     feature_direction: Float[Tensor, "n_embd"],
     overall_direction_magnitude: Float[Tensor, ""] | None = None,
@@ -28,8 +34,8 @@ class ProjectionPostHookLiReFs:
     self.hook_type = hook_type
     self.direction_normalization_mode = direction_normalization_mode
     self.steering_mode = steering_mode
-    self.feature_direction = feature_direction
-    self.feature_direction_normalized = self.feature_direction / self.feature_direction.norm(dim=-1)
+    self.modification_mode = modification_mode
+    self.feature_direction_normalized = feature_direction / feature_direction.norm(dim=-1)
     self.overall_direction_magnitude = overall_direction_magnitude
     self.scale = scale
 
@@ -62,49 +68,161 @@ class ProjectionPostHookLiReFs:
     output: tuple[Tensor, ...]
   ):
     match self.hook_type:
+      case ProjectionPostHookLiReFsModuleType.HIDDEN_STATES:
+        match self.steering_mode:
+          case ProjectionHookMode.FEATURE_AMPLIFICATION:
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[0][:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:, -1] += projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output[0],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:] += projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
+          case ProjectionHookMode.FEATURE_ADDITION:
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                output[0][:, -1] += self.scale * self.feature_direction_normalized
+              case TokenModificationMode.ALL_TOKENS:
+                output[0][:] += self.scale * self.feature_direction_normalized
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
+          case ProjectionHookMode.FEATURE_ABLATION:
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[0][:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:, -1] -= projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output[0],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:] -= projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
+          case _:
+            raise ValueError(f"Unsupported mode: {self.steering_mode}")
       case ProjectionPostHookLiReFsModuleType.ATTENTION:
         match self.steering_mode:
           case ProjectionHookMode.FEATURE_AMPLIFICATION:
-            projection = compute_projection(
-              data=output[0],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            output[0][:, :, :] = output[0] + (self.scale * projection)
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[0][:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:, -1] += projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output[0],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:] += projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case ProjectionHookMode.FEATURE_ADDITION:
-            output[0][:, :, :] = output[0] + (self.scale * self.feature_direction_normalized)
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                output[0][:, -1] += self.scale * self.feature_direction_normalized
+              case TokenModificationMode.ALL_TOKENS:
+                output[0][:] += self.scale * self.feature_direction_normalized
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case ProjectionHookMode.FEATURE_ABLATION:
-            projection = compute_projection(
-              data=output[0],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            output[0][:, :, :] = output[0] - projection
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[0][:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:, -1] -= projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output[0],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[0][:] -= projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case _:
-            raise ValueError(f"Unsupported mode: {self.mode}")
+            raise ValueError(f"Unsupported mode: {self.steering_mode}")
       case ProjectionPostHookLiReFsModuleType.MLP:
         match self.steering_mode:
           case ProjectionHookMode.FEATURE_AMPLIFICATION:
-            projection = compute_projection(
-              data=output,
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            output[:, :, :] = output + projection
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[:, -1] += projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output,
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[:] += projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case ProjectionHookMode.FEATURE_ADDITION:
-            output[:, :, :] = output + (self.scale * self.feature_direction)
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                output[:, -1] += self.scale * self.feature_direction_normalized
+              case TokenModificationMode.ALL_TOKENS:
+                output[:] += self.scale * self.feature_direction_normalized
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case ProjectionHookMode.FEATURE_ABLATION:
-            projection = compute_projection(
-              data=output,
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            output[:, :, :] = output - projection
+            match self.modification_mode:
+              case TokenModificationMode.LAST_TOKEN:
+                projection = compute_projection(
+                  data=output[:, -1],
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[:, -1] -= projection
+              case TokenModificationMode.ALL_TOKENS:
+                projection = compute_projection(
+                  data=output,
+                  direction_normalization_mode=self.direction_normalization_mode,
+                  feature_direction_normalized=self.feature_direction_normalized,
+                  overall_direction_magnitude=self.overall_direction_magnitude,
+                )
+                output[:] -= projection
+              case _:
+                raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
           case _:
-            raise ValueError(f"Unsupported mode: {self.mode}")
+            raise ValueError(f"Unsupported mode: {self.steering_mode}")
       case _:
-        raise ValueError(f"Unsupported module type: {self.type}")
+        raise ValueError(f"Unsupported module type: {self.hook_type}")

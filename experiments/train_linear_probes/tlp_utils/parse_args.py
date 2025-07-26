@@ -2,6 +2,8 @@ from typing import TypedDict
 import argparse
 
 class Args(TypedDict):
+  model_name: str
+
   device: str
 
   hidden_states_file_path: str
@@ -25,6 +27,12 @@ class Args(TypedDict):
 
 def parse_args() -> Args:
   parser = argparse.ArgumentParser()
+
+  parser.add_argument(
+    '--model_name',
+    type=str,
+    help="Name of the model to train the linear probe on.", 
+  )
 
   parser.add_argument(
     '--device',

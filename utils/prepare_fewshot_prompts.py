@@ -13,9 +13,9 @@ def prepare_fewshot_prompts(
   """
 
   match data_name:
-    case 'mmlu-pro':
+    case 'mmlu-pro-3000samples.json':
       dataset = load_from_disk(
-        dataset_path=os.path.join(data_path, data_name),
+        dataset_path=os.path.join(data_path, 'mmlu-pro'),
       )
       val_dataset = dataset['validation']
       

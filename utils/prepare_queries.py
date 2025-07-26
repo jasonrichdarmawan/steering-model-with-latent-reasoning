@@ -21,7 +21,7 @@ def prepare_queries(
   queries: list[str] = []
 
   match data_name:
-    case "mmlu-pro" | "mmlu-pro-3000samples.json":
+    case "mmlu-pro-3000samples.json":
       for entry in data:
         # Reference: https://github.com/yihuaihong/Linear_Reasoning_Features/blob/4f95e7e82935b1bce05e5cda4fc0ca8eff648d98/reasoning_representation/LiReFs_storing_hs.ipynb
         question = entry['question']

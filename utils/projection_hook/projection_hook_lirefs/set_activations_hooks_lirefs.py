@@ -43,6 +43,7 @@ def set_activations_hooks_lirefs(
           print(f"Registering hidden_states pre-hook for {model.config.model_type} model at layer index {layer_index}")
         pre_hook = ProjectionPreHookLiReFs(
           steering_mode=config["steering_mode"],
+          modification_mode=config["modification_mode"],
           direction_normalization_mode=config["direction_normalization_mode"],
           feature_direction=feature_direction,
           overall_direction_magnitude=overall_direction_magnitude,
@@ -54,9 +55,21 @@ def set_activations_hooks_lirefs(
         hooks.append(hook)
 
       if config["hidden_states_hooks_config"]["post_hook"]:
-        raise NotImplementedError(
-          f"Post-hook for hidden states is not implemented for {model.config.model_type} model."
+        if verbose:
+          print(f"Registering hidden_states post-hook for {model.config.model_type} model at layer index {layer_index}")
+        post_hook = ProjectionPostHookLiReFs(
+          hook_type=ProjectionPostHookLiReFsModuleType.HIDDEN_STATES,
+          steering_mode=config["steering_mode"],
+          modification_mode=config["modification_mode"],
+          direction_normalization_mode=config["direction_normalization_mode"],
+          feature_direction=feature_direction,
+          overall_direction_magnitude=overall_direction_magnitude,
+          scale=scale,
         )
+        hook = hidden_states[layer_index].register_forward_hook(
+          hook=post_hook,
+        )
+        hooks.append(hook)
     
     # attention
     if config["attention_hooks_config"]:
@@ -71,6 +84,7 @@ def set_activations_hooks_lirefs(
         post_hook = ProjectionPostHookLiReFs(
           hook_type=ProjectionPostHookLiReFsModuleType.ATTENTION,
           steering_mode=config["steering_mode"],
+          modification_mode=config["modification_mode"],
           direction_normalization_mode=config["direction_normalization_mode"],
           feature_direction=feature_direction,
           overall_direction_magnitude=overall_direction_magnitude,
@@ -95,6 +109,7 @@ def set_activations_hooks_lirefs(
         post_hook = ProjectionPostHookLiReFs(
           hook_type=ProjectionPostHookLiReFsModuleType.MLP,
           steering_mode=config["steering_mode"],
+          modification_mode=config["modification_mode"],
           direction_normalization_mode=config["direction_normalization_mode"],
           feature_direction=feature_direction,
           overall_direction_magnitude=overall_direction_magnitude,

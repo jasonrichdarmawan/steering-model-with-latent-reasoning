@@ -30,6 +30,7 @@ from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import TokenModificationMode
 from utils import ProjectionHookConfig
+from utils import ProjectionHookConfigLiReFs
 from utils import set_activations_hooks
 
 from os.path import join
@@ -47,13 +48,13 @@ if False:
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
   
-  MODEL_NAME = "huginn-0125"
+  MODEL_NAME = "Meta-Llama-3-8B"
   
   PROCESS_HIDDEN_STATES_MODE = ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN
   
   DIRECTION_NORMALIZATION_MODE = DirectionNormalizationMode.UNIT_VECTOR
   PROJECTION_HOOK_MODE = ProjectionHookMode.FEATURE_ADDITION
-  MODIFICATION_MODE = TokenModificationMode.LAST_TOKEN
+  MODIFICATION_MODE = TokenModificationMode.ALL_TOKENS
   
   sys.argv = [
     'main.py',
@@ -64,27 +65,26 @@ if False:
 
     '--device', 'cuda:0',
 
-    '--huginn_mean_recurrence', '32',
+    # '--huginn_mean_recurrence', '32',
 
-    '--with_intervention',
+    # '--with_intervention',
 
-    '--use_linear_probes',
-    '--linear_probes_file_path', f'{WORKSPACE_PATH}/experiments/train_linear_probes/best_checkpoint.pt',
+    # '--use_linear_probes',
+    # '--linear_probes_file_path', f'{WORKSPACE_PATH}/experiments/train_linear_probes/{MODEL_NAME}/best_checkpoint.pt',
 
-    # '--use_candidate_directions',
-    # '--process_hidden_states_mode', PROCESS_HIDDEN_STATES_MODE,
-    # '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/{MODEL_NAME}_mmlu-pro-3000samples.json_{PROCESS_HIDDEN_STATES_MODE}_candidate_directions.pt',
+    '--use_candidate_directions',
+    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/candidate_directions_FIRST_ANSWER_TOKEN.pt',
     
     '--direction_normalization_mode', str(DIRECTION_NORMALIZATION_MODE),
-    '--layer_indices', '31',
+    '--layer_indices', '8',
     '--projection_hook_mode', str(PROJECTION_HOOK_MODE),
     '--modification_mode', str(MODIFICATION_MODE),
-    # '--with_hidden_states_pre_hook',
-    '--with_hidden_states_post_hook',
-    '--scale', '1.0',
+    '--with_hidden_states_pre_hook',
+    # '--with_hidden_states_post_hook',
+    '--scale', '0.1',
 
-    '--tasks', 'piqa',
-    '--num_fewshot', '0',
+    '--tasks', 'mmlu',
+    '--num_fewshot', '1',
     '--batch_size', '1',
     '--limit', '1',
     '--output_file_path', f'{WORKSPACE_PATH}/experiments/lm_eval_results/{MODEL_NAME}.json',
@@ -119,12 +119,22 @@ match args["model_name"]:
       dtype=t.bfloat16,
       batch_size=args["batch_size"],
     )
+  case "Meta-Llama-3-8B":
+    model = HFLM(
+      pretrained=join(
+        args["models_path"], 
+        args["model_name"]
+      ),
+      device=args["device"],
+      dtype=t.bfloat16,
+      batch_size=args["batch_size"],
+    )
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 
 # %%
 
-feature_directions: dict[int, Float[Tensor, "n_embd"]] = None
+feature_directions: dict[int, Float[Tensor, "n_embd"]] = {}
 overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None
 if args["with_intervention"]:
   device_map = get_device_map(model=model.model)
@@ -157,24 +167,13 @@ if args["with_intervention"]:
       args['candidate_directions_file_path'],
       map_location='cpu',
       weights_only=False,
-    )
+    )[args['model_name']]
 
-    feature_directions = compute_directions(
-      model=model.model,
-      candidate_directions=candidate_directions,
-      positive_label="reasoning",
-      negative_label="memorizing",
-    )
-
-    if args['direction_normalization_mode'] == DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE:
-      print("Using overall directions magnitude for normalization.")  
-      overall_directions_magnitude = {
-        layer_index: candidate_direction.norm(dim=-1)
-        for layer_index, candidate_direction in candidate_directions["overall"]["mean"].items()
-      }
-
+    for layer_index in range(len(candidate_directions["reasoning"])):
+      feature_directions[layer_index] = candidate_directions["reasoning"][layer_index] - candidate_directions["memorizing"][layer_index]
+      
       for layer_index, direction in feature_directions.items():
-        overall_directions_magnitude[layer_index] = overall_directions_magnitude[layer_index].to(
+        feature_directions[layer_index] = direction.to(
           device=device_map[layer_index],
           dtype=model.model.dtype,
         )
@@ -229,6 +228,26 @@ if args['with_intervention']:
         },
         scale=args['scale'],
       )
+    case "llama":
+      projection_hook_config = ProjectionHookConfigLiReFs(
+        steering_mode=args['projection_hook_mode'],
+        modification_mode=args['modification_mode'],
+        direction_normalization_mode=args['direction_normalization_mode'],
+        layer_indices=args['layer_indices'],
+        hidden_states_hooks_config={
+          "pre_hook": args['with_hidden_states_pre_hook'],
+          "post_hook": args['with_hidden_states_post_hook'],
+        },
+        attention_hooks_config={
+          "pre_hook": False, 
+          "post_hook": False,
+        },
+        mlp_hooks_config={
+          "pre_hook": False, 
+          "post_hook": False,
+        },
+        scale=args['scale'],
+      )
     case _:
       raise ValueError(f"Unsupported model type for projection hooks: {model.config.model_type}")
 
@@ -241,17 +260,13 @@ if args['with_intervention']:
 else:
   print("No intervention hooks set up, proceeding without them.")
 
-match args["model_name"]:
-  case "huginn-0125":
-    results = simple_evaluate(
-      model=model,
-      tasks=args['tasks'],
-      num_fewshot=args["num_fewshot"],
-      limit=args["limit"],
-    )["results"]
-    print(f"Evaluation results:\n{results}")
-  case _:
-    raise ValueError(f"Unsupported model name: {args['model_name']}")
+results = simple_evaluate(
+  model=model,
+  tasks=args['tasks'],
+  num_fewshot=args["num_fewshot"],
+  limit=args["limit"],
+)["results"]
+print(f"Evaluation results:\n{results}")
 
 if args["with_intervention"]:
   print("Removing projection hooks from the model.")
@@ -291,7 +306,6 @@ output_key = ' '.join(
       'use_linear_probes',
 
       'use_candidate_directions',
-      'process_hidden_states_mode',
 
       'direction_normalization_mode',
       'layer_indices',

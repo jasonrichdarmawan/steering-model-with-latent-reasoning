@@ -52,12 +52,28 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs save_hidden_states \
+--jobs save_hidden_states_model_name_Meta-Llama-3-8B \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
 Jobs:
 - save_hidden_states
+- save_hidden_states_model_name_Meta-Llama-3-8B
+
+# How to train linear probes?
+
+```shell
+WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
+
+python runner/main.py \
+--workspace_path "$WORKSPACE_PATH" \
+--jobs train_linear_probes_model_name_Meta-Llama-3-8B \
+--output_path "$WORKSPACE_PATH/experiments/runner"
+```
+
+Jobs:
+- train_linear_probes_model_name_huginn-0125
+- train_linear_probes_model_name_Meta-Llama-3-8B
 
 ## How to save candidate directions?
 
@@ -66,15 +82,14 @@ WORKSPACE_PATH="/root/autodl-fs"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_save_candidate_directions_all_tokens \
+--jobs save_candidate_directions \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
 Jobs:
-- mmlu_pro_save_candidate_directions
-- mmlu_pro_save_candidate_directions_all_tokens
-- mmlu_pro_meta-llama-3-8b_save_candidate_directions
-- mmlu_pro_meta-llama-3-8b_save_candidate_directions_all_tokens
+- save_candidate_directions
+- save_candidate_directions_model_name_Meta-Llama-3-8B
+- save_candidate_directions_model_name_huginn-0125
 
 Note:
 - mmlu_pro_save_candidate_directions_all_tokens with batch size 2 requires 1x 4090 or equivalent
@@ -106,7 +121,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1 \
+--jobs evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_layer_indices_8_scale_-5e-2 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -118,6 +133,8 @@ Tasks:
 - mmlu_pro_evaluate_accuracy_reasoning_memorizing_with_intervention_1_all_tokens
 - mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing
 - mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
+- evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B
+- evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_layer_indices_8_scale_-5e-2
 
 Note:
 - mmlu_pro_evaluate_accuracy_reasoning_memorizing and its derivatives with batch size 1 require 2x 3090 or equivalent
@@ -151,6 +168,8 @@ Jobs:
 - mmlu_evaluate_lm_eval_with_intervention_use_linear_probes_few_shots_1
 - evaluate_lm_eval_tasks_piqa
 - evaluate_lm_eval_tasks_piqa_use_linear_probes
+- evaluate_lm_eval_model_name_Meta-Llama-3-8B
+- evaluate_lm_eval_model_name_Meta-Llama-3-8B_with_intervention_user_linear_probes
 
 Note:
 - mmlu_pro_evaluate_lm_eval and its derivatives with batch size 4 require 2x 3060 or equivalent

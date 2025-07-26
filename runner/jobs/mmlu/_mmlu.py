@@ -36,7 +36,6 @@ def get_mmlu(
       with_intervention=True,
       
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       
       layer_indices=[66],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
@@ -56,7 +55,6 @@ def get_mmlu(
       with_intervention=True,
       
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
@@ -75,7 +73,6 @@ def get_mmlu(
       with_intervention=True,
 
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       
       layer_indices=[127],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
@@ -94,7 +91,6 @@ def get_mmlu(
       with_intervention=True,
       
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
 
       layer_indices=[129],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
@@ -113,7 +109,6 @@ def get_mmlu(
       with_intervention=True,
       
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
 
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
@@ -132,7 +127,6 @@ def get_mmlu(
       with_intervention=True,
       
       use_candidate_directions=True,
-      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
       
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.SCALE_WITH_OVERALL_MAGNITUDE,

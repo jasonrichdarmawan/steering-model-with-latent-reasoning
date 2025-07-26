@@ -4,33 +4,44 @@ shell = """\
 WORKSPACE_PATH={workspace_path}
 
 python experiments/save_candidate_directions/main.py \
---models_path "$WORKSPACE_PATH/transformers" \
---model_name {model_name} \
+{models_name_arg} \
 \
-{huginn_num_steps_flag} \
-\
---data_path "$WORKSPACE_PATH/datasets/lirefs" \
---data_name mmlu-pro-3000samples.json \
-\
---data_batch_size 1 \
+{hidden_states_file_paths_arg} \
 \
 {process_hidden_states_mode_arg} \
 \
 --output_path "$WORKSPACE_PATH/experiments/save_candidate_directions"
 """
 
+def handle_save_candidate_directions(
+  workspace_path: str,
+  job: str,
+):
+  if job == "save_candidate_directions":
+    return get_save_candidate_directions(
+      workspace_path=workspace_path,
+      models_name=["huginn-0125"],
+    )
+  elif job == "save_candidate_directions_model_name_Meta-Llama-3-8B":
+    return get_save_candidate_directions(
+      workspace_path=workspace_path,
+      models_name=["Meta-Llama-3-8B"],
+    )
+
 def get_save_candidate_directions(
   workspace_path: str,
-  model_name: str,
-  process_hidden_states_mode: ProcessHiddenStatesMode,
+  models_name: list[str],
 ) -> str:
-  huginn_num_steps_flag = "--huginn_num_steps 32" if model_name == "huginn-0125" else ""
+  models_name_arg = f"--models_name " + " ".join(models_name)
 
-  process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}"
+  hidden_states_file_paths = [
+    f"{workspace_path}/experiments/save_hidden_states/{model_name}_hidden_states_FIRST_ANSWER_TOKEN.pt"
+    for model_name in models_name
+  ]
+  hidden_states_file_paths_args = f"--hidden_states_file_paths " + " ".join(hidden_states_file_paths)
 
   return shell.format(
     workspace_path=workspace_path,
-    model_name=model_name,
-    huginn_num_steps_flag=huginn_num_steps_flag,
-    process_hidden_states_mode_arg=process_hidden_states_mode_arg,
+    models_name_arg=models_name_arg,
+    hidden_states_file_paths_arg=hidden_states_file_paths_args,
   )

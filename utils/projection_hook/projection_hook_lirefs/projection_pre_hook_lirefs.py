@@ -1,4 +1,5 @@
 from utils.projection_hook import ProjectionHookMode
+from utils.projection_hook import TokenModificationMode
 from utils.projection_hook import DirectionNormalizationMode
 from utils.projection_hook import compute_projection
 
@@ -9,6 +10,7 @@ class ProjectionPreHookLiReFs:
   def __init__(
     self,
     steering_mode: ProjectionHookMode,
+    modification_mode: TokenModificationMode,
     direction_normalization_mode: DirectionNormalizationMode,
     feature_direction: Float[Tensor, "n_embd"],
     overall_direction_magnitude: Float[Tensor, ""] | None = None,
@@ -20,8 +22,8 @@ class ProjectionPreHookLiReFs:
     super().__init__()
     self.direction_normalization_mode = direction_normalization_mode
     self.steering_mode = steering_mode
-    self.feature_direction = feature_direction
-    self.feature_direction_normalized = self.feature_direction / self.feature_direction.norm(dim=-1)
+    self.modification_mode = modification_mode
+    self.feature_direction_normalized = feature_direction / feature_direction.norm(dim=-1)
     self.overall_direction_magnitude = overall_direction_magnitude
     self.scale = scale
 
@@ -54,15 +56,33 @@ class ProjectionPreHookLiReFs:
   ):
     match self.steering_mode:
       case ProjectionHookMode.FEATURE_ADDITION:
-        input[0][:, :, :] = input[0] + (self.scale * self.feature_direction_normalized)
+        match self.modification_mode:
+          case TokenModificationMode.LAST_TOKEN:
+            input[0][:, -1] += self.scale * self.feature_direction_normalized
+          case TokenModificationMode.ALL_TOKENS:
+            input[0][:] += self.scale * self.feature_direction_normalized
+          case _:
+            raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
       case ProjectionHookMode.FEATURE_AMPLIFICATION:
-        projection = compute_projection(
-          data=input[0],
-          direction_normalization_mode=self.direction_normalization_mode,
-          feature_direction_normalized=self.feature_direction_normalized,
-          overall_direction_magnitude=self.overall_direction_magnitude,
-        )
-        input[0][:, :, :] = input[0] + projection
+        match self.modification_mode:
+          case TokenModificationMode.LAST_TOKEN:
+            projection = compute_projection(
+              data=input[0][:, -1],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            input[0][:, -1] += projection
+          case TokenModificationMode.ALL_TOKENS:
+            projection = compute_projection(
+              data=input[0],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            input[0][:] += projection
+          case _:
+            raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
       case ProjectionHookMode.FEATURE_ABLATION:
         """
         we project the activation vector v 
@@ -88,12 +108,24 @@ class ProjectionPreHookLiReFs:
         effectively "ablating" that feature
         from the model's processing stream.
         """
-        projection = compute_projection(
-          data=input[0],
-          direction_normalization_mode=self.direction_normalization_mode,
-          feature_direction_normalized=self.feature_direction_normalized,
-          overall_direction_magnitude=self.overall_direction_magnitude,
-        )
-        input[0][:, :, :] = input[0] - projection
+        match self.modification_mode:
+          case TokenModificationMode.LAST_TOKEN:
+            projection = compute_projection(
+              data=input[0][:, -1],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            input[0][:, -1] -= projection
+          case TokenModificationMode.ALL_TOKENS:
+            projection = compute_projection(
+              data=input[0],
+              direction_normalization_mode=self.direction_normalization_mode,
+              feature_direction_normalized=self.feature_direction_normalized,
+              overall_direction_magnitude=self.overall_direction_magnitude,
+            )
+            input[0][:] -= projection
+          case _:
+            raise ValueError(f"Unsupported token modification mode: {self.modification_mode}")
       case _:
-        raise ValueError(f"Unsupported mode: {self.mode}")
+        raise ValueError(f"Unsupported mode: {self.steering_mode}")

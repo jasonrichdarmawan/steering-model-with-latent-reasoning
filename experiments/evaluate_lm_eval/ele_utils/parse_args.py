@@ -1,4 +1,3 @@
-from utils import ProcessHiddenStatesMode
 from utils import TokenModificationMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
@@ -22,7 +21,6 @@ class Args(TypedDict):
   linear_probes_file_path: str | None
 
   use_candidate_directions: bool
-  process_hidden_states_mode: ProcessHiddenStatesMode | None
   candidate_directions_file_path: str | None
   
   direction_normalization_mode: DirectionNormalizationMode | None
@@ -96,13 +94,6 @@ def parse_args() -> Args:
     '--use_candidate_directions',
     action='store_true',
     help="Whether to use candidate directions for the intervention.",
-  )
-  parser.add_argument(
-    '--process_hidden_states_mode',
-    type=ProcessHiddenStatesMode,
-    choices=list(ProcessHiddenStatesMode),
-    help="Mode for processing hidden states during the intervention.",
-    default=None,
   )
   parser.add_argument(
     '--candidate_directions_file_path',
