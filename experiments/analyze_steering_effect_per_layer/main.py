@@ -33,7 +33,7 @@ from utils import tokenize_text
 from tqdm import tqdm
 import torch as t
 from torch import Tensor
-from torch.nn.functional import log_softmax, kl_div
+import torch.nn.functional as F
 from jaxtyping import Float
 import numpy as np
 import math
@@ -63,7 +63,7 @@ if False:
 
     '--data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples.json',
-    # '--data_sample_size', '24',
+    '--data_sample_size', '24',
     '--data_batch_size', '2',
 
     '--output_path', f'{WORKSPACE_PATH}/experiments/analyze_steering_effect_per_layer/{MODEL_NAME}',
@@ -266,9 +266,9 @@ effect_per_layer: list[float] = []
 
 def compute_kl_divergence(logits: Float[Tensor, "batch seq_len n_embd"]):
   # Reference: https://github.com/jasonrichdarmawan/steering-thinking-models/blob/ec310e0fe1b132093f7c44a8d2e39f173d2f75ae/vector-layer-attribution/analyze_layer_effects.py
-  probs = log_softmax(logits, dim=-1)
-  detached_probs = log_softmax(logits.detach(), dim=-1)
-  return kl_div(probs, detached_probs, reduction="batchmean")
+  log_probs = F.log_softmax(logits, dim=-1)
+  detached_probs = F.softmax(logits.detach(), dim=-1)
+  return F.kl_div(log_probs, detached_probs, reduction="batchmean")
 
 effects: dict[
   str, 
@@ -394,15 +394,22 @@ Reference: https://github.com/cvenhoff/steering-thinking-llms/blob/83fc94a7c0afd
 """
 
 print("Compute cosine similarities between directions and model embedding layers.")
-cosine_similarities = {}
-module = model.transformer.wte
+match model.config.model_type:
+  case "huginn_raven":
+    module = model.transformer.wte
+  case "llama":
+    module = model.model.embed_tokens
+  case _:
+    raise ValueError(f"Model type {model.config.model_type} is not supported for cosine similarity computation.")
 cloned_directions = {
   layer_index: direction.detach().clone().to(device=module.weight.device)
   for layer_index, direction in directions_normalized.items()
 }
+
+cosine_similarities = {}
 for layer_index, direction in cloned_directions.items():
   cosine_similarities[layer_index] = (
-    direction @ model.transformer.wte.weight.data.T
+    direction @ module.weight.data.T
   ).max().item()
 
 print("Sort cosine similarities by value.")
