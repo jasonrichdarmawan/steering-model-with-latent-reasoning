@@ -70,13 +70,23 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro-3000samples.json",
       with_intervention=True,
+
+      use_candidate_directions=True,
       
       layer_indices=[66],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      modification_mode=TokenModificationMode.LAST_TOKEN,
+      modification_mode=TokenModificationMode.ALL_TOKENS,
+
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)
@@ -88,12 +98,22 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro-3000samples.json",
       with_intervention=True,
       
+      use_candidate_directions=True,
+
       layer_indices=[129],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      modification_mode=TokenModificationMode.LAST_TOKEN,
+      modification_mode=TokenModificationMode.ALL_TOKENS,
+
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)
@@ -104,13 +124,23 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro-3000samples.json",
       with_intervention=True,
+
+      use_candidate_directions=True,
       
       layer_indices=[1],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      modification_mode=TokenModificationMode.LAST_TOKEN,
+      modification_mode=TokenModificationMode.ALL_TOKENS,
+
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)
@@ -133,12 +163,22 @@ def get_mmlu_pro(
       test_data_name="mmlu-pro-3000samples.json",
       with_intervention=True,
       
+      use_candidate_directions=True,
+
       layer_indices=[21],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      modification_mode=TokenModificationMode.LAST_TOKEN,
+      modification_mode=TokenModificationMode.ALL_TOKENS,
+
       with_hidden_states_pre_hook=True,
       with_hidden_states_post_hook=False,
+  
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)
@@ -165,8 +205,16 @@ def get_mmlu_pro(
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
       modification_mode=TokenModificationMode.LAST_TOKEN,
+
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)
@@ -182,9 +230,17 @@ def get_mmlu_pro(
       layer_indices=[129],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
       projection_hook_mode=ProjectionHookMode.FEATURE_ADDITION,
-      modification_mode=TokenModificationMode.LAST_TOKEN,
+      modification_mode=TokenModificationMode.ALL_TOKENS,
+
       with_hidden_states_pre_hook=False,
       with_hidden_states_post_hook=True,
+
+      with_attention_pre_hook=False,
+      with_attention_post_hook=False,
+
+      with_mlp_pre_hook=False,
+      with_mlp_post_hook=False,
+
       scale=1.0,
     )
     commands.append(command)

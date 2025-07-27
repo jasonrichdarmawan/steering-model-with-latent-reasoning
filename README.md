@@ -123,7 +123,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_layer_indices_8_scale_-5e-2 \
+--jobs evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_use_linear_probes_with_hidden_states_post_hook_layer_indices_12_modification_mode_last_token_scale_-5e-2 \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -137,9 +137,11 @@ Tasks:
 - mmlu_pro_meta-llama-3-8b_evaluate_accuracy_reasoning_memorizing_with_intervention
 - evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B
 - evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_layer_indices_8_scale_-5e-2
+- evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_layer_indices_2_scale_-5e-2
+- evaluate_accuracy_reasoning_memorizing_model_name_Meta-Llama-3-8B_with_intervention_use_linear_probes_with_hidden_states_post_hook_layer_indices_12_modification_mode_last_token_scale_-5e-2
 
 Note:
-- mmlu_pro_evaluate_accuracy_reasoning_memorizing and its derivatives with batch size 1 require 2x 3090 or equivalent
+- mmlu_pro_evaluate_accuracy_reasoning_memorizing and its derivatives with batch size 1 require ~~2x 3090~~ (1x 3090) or equivalent
 
 ## How to evaluate with lm_eval?
 

@@ -65,7 +65,7 @@ if False:
     '--models_path', f'{WORKSPACE_PATH}/transformers',
     '--model_name', MODEL_NAME,
 
-    '--device', 'cuda:0',
+    '--device', 'cuda:1',
 
     # '--huginn_num_steps', '129',
 
@@ -77,16 +77,28 @@ if False:
     '--batch_size', '1',
 
     '--with_intervention',
+
+    '--use_linear_probes',
+    '--linear_probes_file_path', f'{WORKSPACE_PATH}/experiments/train_linear_probes/{MODEL_NAME}/best_checkpoint.pt',
     
-    '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/candidate_directions_FIRST_ANSWER_TOKEN.pt',
+    # '--use_candidate_directions',
+    # '--candidate_directions_file_path', f'{WORKSPACE_PATH}/experiments/save_candidate_directions/candidate_directions_FIRST_ANSWER_TOKEN.pt',
     
-    '--layer_indices', '8',
+    '--layer_indices', '12',
     '--direction_normalization_mode', str(DIRECTION_NORMALIZATION_MODE),
     '--projection_hook_mode', str(PROJECTION_HOOK_MODE),
     '--modification_mode', str(MODIFICATION_MODE),
-    '--with_hidden_states_pre_hook',
-    # '--with_hidden_states_post_hook',
-    '--scale', '0.1',
+    
+    # '--with_hidden_states_pre_hook',
+    '--with_hidden_states_post_hook',
+
+    # '--with_attention_pre_hook',
+    # '--with_attention_post_hook',
+
+    # '--with_mlp_pre_hook',
+    # '--with_mlp_post_hook',
+
+    '--scale', '0.05',
 
     '--output_file_path', f'{WORKSPACE_PATH}/experiments/reasoning_memorizing_accuracy/Meta-Llama-3-8B.json'
   ]
@@ -264,15 +276,37 @@ del entries_sorted
 
 directions: dict[int, Float[Tensor, "n_embd"]] = {}
 if args['with_intervention']:
-  print("Computing directions for the model.")
-  candidate_directions = t.load(
-    args['candidate_directions_file_path'],
-    map_location='cpu',
-    weights_only=False,
-  )[args['model_name']]
+  if args['use_linear_probes']:
+    print("Using linear probes for the intervention.")
+    checkpoint = t.load(
+      args['linear_probes_file_path'],
+      map_location='cpu',
+      weights_only=False,
+    )
+    print("Best layer index:", checkpoint.get('layer_index', None))
 
-  for layer_index in range(len(candidate_directions['reasoning'])):
-    directions[layer_index] = candidate_directions['reasoning'][layer_index] - candidate_directions['memorizing'][layer_index]
+    directions = {
+      layer_index: linear_probe[:, 0] - linear_probe[:, 1]
+      for layer_index, linear_probe in enumerate(checkpoint['linear_probe'])
+    }
+
+    del checkpoint
+  elif args['use_candidate_directions']:
+    print("Computing directions for the model.")
+    candidate_directions = t.load(
+      args['candidate_directions_file_path'],
+      map_location='cpu',
+      weights_only=False,
+    )[args['model_name']]
+
+    for layer_index in range(len(candidate_directions['reasoning'])):
+      directions[layer_index] = candidate_directions['reasoning'][layer_index] - candidate_directions['memorizing'][layer_index]
+
+    del candidate_directions
+  else:
+    raise ValueError(
+      "Either 'use_linear_probes' or 'use_candidate_directions' must be True when 'with_intervention' is True."
+    )
 
   device_map = get_device_map(model=model)
 
@@ -281,8 +315,6 @@ if args['with_intervention']:
       device=device_map[layer_index],
       dtype=model.model.dtype,
     )
-
-  del candidate_directions
 else:
   print("No intervention, proceeding without directions.")
 
@@ -311,15 +343,15 @@ if args['with_intervention']:
         layer_indices=args['layer_indices'],
         hidden_states_hooks_config={
           "pre_hook": args['with_hidden_states_pre_hook'],
-          "post_hook": args['with_hidden_states_post_hook'], # Not implemented
+          "post_hook": args['with_hidden_states_post_hook'],
         },
         attention_hooks_config={
-          "pre_hook": False,
-          "post_hook": True,
+          "pre_hook": args['with_attention_pre_hook'],
+          "post_hook": args['with_attention_post_hook'],
         },
         mlp_hooks_config={
-          "pre_hook": False,
-          "post_hook": True,
+          "pre_hook": args['with_mlp_pre_hook'],
+          "post_hook": args['with_mlp_post_hook'],
         },
         scale=args['scale'],
       )
@@ -369,8 +401,6 @@ for entries_batch in tqdm(entries_batched):
   del inputs
   del responses
 
-  t.cuda.empty_cache()
-
 print(f"No answers found in the dataset: {len(no_answers)}")
 
 if args['with_intervention']:
@@ -383,7 +413,7 @@ if args['with_intervention']:
 
 def _compute_accuracy(
   entries: list[str],
-  label: str
+  label: str,
 ):
   total = len(entries)
   if total == 0:

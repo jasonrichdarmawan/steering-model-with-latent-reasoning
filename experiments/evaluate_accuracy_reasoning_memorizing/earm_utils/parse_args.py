@@ -22,14 +22,26 @@ class Args(TypedDict):
 
   with_intervention: bool
 
+  use_linear_probes: bool
+  linear_probes_file_path: str | None
+
+  use_candidate_directions: bool
   candidate_directions_file_path: str | None
 
   layer_indices: list[int] | None
   direction_normalization_mode: DirectionNormalizationMode | None
   projection_hook_mode: ProjectionHookMode | None
   modification_mode: TokenModificationMode | None
+
   with_hidden_states_pre_hook: bool
   with_hidden_states_post_hook: bool
+
+  with_attention_pre_hook: bool
+  with_attention_post_hook: bool
+
+  with_mlp_pre_hook: bool
+  with_mlp_post_hook: bool
+
   scale: float | None
 
   output_file_path: str | None
@@ -101,11 +113,37 @@ def parse_args() -> Args:
     action="store_true",
     help="Whether to apply the intervention for reasoning and memorization accuracy evaluation"
   )
+
+  parser.add_argument(
+    '--use_linear_probes',
+    action="store_true",
+    help="Whether to use linear probes for the intervention"
+  )
+  parser.add_argument(
+    '--linear_probes_file_path',
+    type=str,
+    help="Path to the file containing the linear probes for intervention",
+    default=None,
+  )
+
+  parser.add_argument(
+    '--use_candidate_directions',
+    action="store_true",
+    help="Whether to use candidate directions for the intervention"
+  )
   parser.add_argument(
     '--candidate_directions_file_path',
     type=str,
     help="Path to the file containing the candidate directions for intervention",
     default=None,
+  )
+
+  parser.add_argument(
+    '--layer_indices',
+    type=int,
+    nargs='+',
+    help="Indices of the layers to apply the intervention",
+    default=None
   )
   parser.add_argument(
     '--direction_normalization_mode',
@@ -128,13 +166,7 @@ def parse_args() -> Args:
     help="Mode for modifying tokens during the intervention.",
     default=None,
   )
-  parser.add_argument(
-    '--layer_indices',
-    type=int,
-    nargs='+',
-    help="Indices of the layers to apply the intervention",
-    default=None
-  )
+
   parser.add_argument(
     '--with_hidden_states_pre_hook',
     action="store_true",
@@ -145,6 +177,29 @@ def parse_args() -> Args:
     action="store_true",
     help="Whether to use post-hook for the intervention"
   )
+
+  parser.add_argument(
+    '--with_attention_pre_hook',
+    action="store_true",
+    help="Whether to use pre-hook for attention layers"
+  )
+  parser.add_argument(
+    '--with_attention_post_hook',
+    action="store_true",
+    help="Whether to use post-hook for attention layers"
+  )
+  
+  parser.add_argument(
+    '--with_mlp_pre_hook',
+    action="store_true",
+    help="Whether to use pre-hook for MLP layers"
+  )
+  parser.add_argument(
+    '--with_mlp_post_hook',
+    action="store_true",
+    help="Whether to use post-hook for MLP layers"
+  )
+
   parser.add_argument(
     '--scale',
     type=float,
