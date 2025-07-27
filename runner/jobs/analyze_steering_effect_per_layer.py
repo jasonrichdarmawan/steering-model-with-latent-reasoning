@@ -15,10 +15,33 @@ python experiments/analyze_steering_effect_per_layer/main.py \
 \
 {data_path_arg} \
 {data_name_arg} \
---data_batch_size 1 \
+--data_batch_size 2 \
 \
 --output_path "$WORKSPACE_PATH/experiments/analyze_steering_effect_per_layer/huginn-0125"
 """
+
+def handle_analyze_steering_effect_per_layer(
+  workspace_path: str,
+  job: str,
+) -> str:
+  if job == "analyze_steering_effect_per_layer_model_name_huginn-0125":
+    return get_analyze_steering_effect_per_layer(
+      workspace_path=workspace_path,
+      model_name="huginn-0125",
+      data_path="datasets/lirefs",
+      data_name="mmlu-pro-3000samples.json",
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+    )
+  elif job == "analyze_steering_effect_per_layer_model_name_Meta-Llama-3-8B":
+    return get_analyze_steering_effect_per_layer(
+      workspace_path=workspace_path,
+      model_name="Meta-Llama-3-8B",
+      data_path="datasets/lirefs",
+      data_name="mmlu-pro-3000samples.json",
+      direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
+    )
+  else:
+    raise ValueError(f"Job {job} is not recognized for analyze steering effect per layer.")
 
 def get_analyze_steering_effect_per_layer(
   workspace_path: str,

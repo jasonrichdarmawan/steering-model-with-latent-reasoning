@@ -1,5 +1,6 @@
 from jobs import handle_save_hidden_states
 from jobs import handle_save_candidate_directions
+from jobs import handle_analyze_steering_effect_per_layer
 from jobs import handle_train_linear_probes
 from jobs import handle_evaluate_accuracy_reasoning_memorizing
 from jobs import handle_evaluate_lm_eval
@@ -21,6 +22,12 @@ def set_up_experiments(
       experiments.append([command])
     elif job.startswith("save_candidate_directions"):
       command = handle_save_candidate_directions(
+        workspace_path=workspace_path,
+        job=job,
+      )
+      experiments.append([command])
+    elif job.startswith("analyze_steering_effect_per_layer"):
+      command = handle_analyze_steering_effect_per_layer(
         workspace_path=workspace_path,
         job=job,
       )

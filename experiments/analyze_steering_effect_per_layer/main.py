@@ -37,7 +37,6 @@ from torch.nn.functional import log_softmax, kl_div
 from jaxtyping import Float
 import numpy as np
 import math
-import gc
 import matplotlib.pyplot as plt
 
 # %%
@@ -47,7 +46,7 @@ if False:
 
   print("Programatically setting sys.argv for testing purposes.")
   WORKSPACE_PATH = "/media/npu-tao/disk4T/jason"
-  MODEL_NAME = "huginn-0125"
+  MODEL_NAME = "Meta-Llama-3-8B"
   DIRECTION_NORMALIZATION_MODE = str(DirectionNormalizationMode.UNIT_VECTOR)
   sys.argv = [
     'main.py',
@@ -64,8 +63,8 @@ if False:
 
     '--data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
     '--data_name', 'mmlu-pro-3000samples.json',
-    '--data_sample_size', '24',
-    '--data_batch_size', '1',
+    # '--data_sample_size', '24',
+    '--data_batch_size', '2',
 
     '--output_path', f'{WORKSPACE_PATH}/experiments/analyze_steering_effect_per_layer/{MODEL_NAME}',
   ]
@@ -99,7 +98,44 @@ match args["model_name"]:
       "lm_head": 0,
     }
   case "Meta-Llama-3-8B":
-    device_map = args['device'] or "cuda:0"
+    device_map = args['device'] or {
+      "model.embed_tokens": 0,
+      "model.layers.0": 0,
+      "model.layers.1": 0,
+      "model.layers.2": 0,
+      "model.layers.3": 0,
+      "model.layers.4": 0,
+      "model.layers.5": 0,
+      "model.layers.6": 0,
+      "model.layers.7": 0,
+      "model.layers.8": 0,
+      "model.layers.9": 0,
+      "model.layers.10": 0,
+      "model.layers.11": 0,
+      "model.layers.12": 0,
+      "model.layers.13": 1,
+      "model.layers.14": 1,
+      "model.layers.15": 1,
+      "model.layers.16": 1,
+      "model.layers.17": 1,
+      "model.layers.18": 1,
+      "model.layers.19": 1,
+      "model.layers.20": 1,
+      "model.layers.21": 1,
+      "model.layers.22": 1,
+      "model.layers.23": 1,
+      "model.layers.24": 1,
+      "model.layers.25": 1,
+      "model.layers.26": 1,
+      "model.layers.27": 1,
+      "model.layers.28": 1,
+      "model.layers.29": 1,
+      "model.layers.30": 1,
+      "model.layers.31": 1,
+      "model.norm": 1,
+      "model.rotary_emb": 0,
+      "lm_head": 0,
+    }
   case _:
     raise ValueError(f"Model type {args['model_name']} is not supported for loading.")
 
@@ -200,6 +236,7 @@ for index, query in queries_with_idx:
 queries_sorted = sorted(
   queries_with_label,
   key=lambda item: len(item['query']),
+  reverse=True,
 )
 
 del queries_with_idx
@@ -224,8 +261,6 @@ save_grad_hooks, gradients = set_save_grad_hooks(
   gradient_mode=GradientMode.LAST_TOKEN,
 )
 
-# %%
-
 print("Computing the effect of each candidate direction per layer.")
 effect_per_layer: list[float] = []
 
@@ -244,15 +279,15 @@ effects: dict[
   "overall set": {}
 }
 
-match model.config.model_type:
-  case "huginn_raven":
-    for queries_batch in tqdm(queries_batched):
-      inputs = tokenize_text(
-        model=model,
-        tokenizer=tokenizer,
-        text=[item['query'] for item in queries_batch],
-      )
+for queries_batch in tqdm(queries_batched):
+  inputs = tokenize_text(
+    model=model,
+    tokenizer=tokenizer,
+    text=[item['query'] for item in queries_batch],
+  )
 
+  match model.config.model_type:
+    case "huginn_raven":
       outputs = model(
         input_ids=inputs["input_ids"],
         attention_mask=inputs["attention_mask"],
@@ -265,53 +300,56 @@ match model.config.model_type:
           "return_stats": False,
         }
       )
-
-      loss = compute_kl_divergence(outputs["logits"][:, -1:])
-      loss.backward()
-
-      labels_batch = np.array(
-        [item['label'] for item in queries_batch]
+    case "llama":
+      outputs = model(
+        input_ids=inputs["input_ids"],
+        attention_mask=inputs["attention_mask"],
       )
+    case _:
+      raise ValueError(f"Model type {model.config.model_type} is not supported.")
 
-      reasoning_indices_batch = np.where(
-        labels_batch == 'reasoning'
-      )[0]
-      memorizing_indies_batch = np.where(
-        labels_batch == 'memorizing'
-      )[0]
+  loss = compute_kl_divergence(outputs["logits"][:, -1:])
+  loss.backward()
 
-      for layer_index in list(
-        gradients.keys() & directions_normalized.keys()
-      ):
-        effects_tensor = (
-          gradients[layer_index]
-          @ directions_normalized[layer_index]
-        ) # shape (batch, seq_len)
+  labels_batch = np.array(
+    [item['label'] for item in queries_batch]
+  )
 
-        reasoning_effects_batch = effects_tensor[reasoning_indices_batch].mean().abs().item()
-        memorizing_effects_batch = effects_tensor[memorizing_indies_batch].mean().abs().item()
-        overall_effects_batch = effects_tensor.mean().abs().item()
+  reasoning_indices_batch = np.where(
+    labels_batch == 'reasoning'
+  )[0]
+  memorizing_indies_batch = np.where(
+    labels_batch == 'memorizing'
+  )[0]
 
-        effects_sets = {
-          "reasoning set": reasoning_effects_batch,
-          "memorizing set": memorizing_effects_batch,
-          "overall set": overall_effects_batch,
-        }
-        for set_name, value in effects_sets.items():
-          if effects[set_name].get(layer_index) is None:
-            effects[set_name][layer_index] = []
-          if not math.isnan(value):
-            effects[set_name][layer_index].append(value)
+  for layer_index in list(
+    gradients.keys() & directions_normalized.keys()
+  ):
+    effects_tensor = (
+      gradients[layer_index]
+      @ directions_normalized[layer_index]
+    ) # shape (batch, seq_len)
 
-      del inputs
-      del outputs
-      del loss
-      model.zero_grad()
-      gradients.clear()
-      gc.collect()
-      t.cuda.empty_cache()
-  case _:
-    raise ValueError(f"Model type {model.config.model_type} is not supported.")
+    reasoning_effects_batch = effects_tensor[reasoning_indices_batch].mean().abs().item()
+    memorizing_effects_batch = effects_tensor[memorizing_indies_batch].mean().abs().item()
+    overall_effects_batch = effects_tensor.mean().abs().item()
+
+    effects_sets = {
+      "reasoning set": reasoning_effects_batch,
+      "memorizing set": memorizing_effects_batch,
+      "overall set": overall_effects_batch,
+    }
+    for set_name, value in effects_sets.items():
+      if effects[set_name].get(layer_index) is None:
+        effects[set_name][layer_index] = []
+      if not math.isnan(value):
+        effects[set_name][layer_index].append(value)
+
+  del inputs
+  del outputs
+  del loss
+  model.zero_grad()
+  gradients.clear()
 
 print("Removing hooks from the model.")
 for save_grad_hook in save_grad_hooks:

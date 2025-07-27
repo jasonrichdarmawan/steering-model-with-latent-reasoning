@@ -101,7 +101,7 @@ WORKSPACE_PATH="/media/npu-tao/disk4T/jason"
 
 python runner/main.py \
 --workspace_path "$WORKSPACE_PATH" \
---jobs mmlu_pro_analyze_steering_effect_per_layer \
+--jobs analyze_steering_effect_per_layer_model_name_Meta-Llama-3-8B \
 --output_path "$WORKSPACE_PATH/experiments/runner"
 ```
 
@@ -110,9 +110,11 @@ Jobs:
 - mmlu_pro_analyze_steering_effect_per_layer_all_tokens
 - mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer
 - mmlu_pro_meta-llama-3-8b_analyze_steering_effect_per_layer_all_tokens
+- analyze_steering_effect_per_layer_model_name_huginn-0125
+- analyze_steering_effect_per_layer_model_name_Meta-Llama-3-8B
 
 Note:
-- mmlu_pro_analyze_steering_effect_per_layer and its derivatives with batch size 1 require 4x 3090 or equivalent
+- mmlu_pro_analyze_steering_effect_per_layer and its derivatives with batch size 2 require ~~4x 3090~~ (2x 3090) or equivalent
 
 ## How to evaluate accuracy reasoning and memorization?
 
