@@ -394,7 +394,7 @@ def _compute_accuracy(
   return accuracy
 
 match args['test_data_name']:
-  case 'mmlu-pro':
+  case 'mmlu-pro-3000samples.json':
     reasoning_entries = [
       entry
       for batch in entries_batched

@@ -1,4 +1,3 @@
-from utils import ProcessHiddenStatesMode
 from utils import DirectionNormalizationMode
 from utils import ProjectionHookMode
 from utils import TokenModificationMode
@@ -21,7 +20,6 @@ def get_mmlu_pro(
       model_name="huginn-0125",
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
@@ -31,7 +29,6 @@ def get_mmlu_pro(
       model_name="huginn-0125",
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
-      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
@@ -43,7 +40,6 @@ def get_mmlu_pro(
       model_name="Meta-Llama-3-8B",
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
@@ -53,7 +49,6 @@ def get_mmlu_pro(
       model_name="Meta-Llama-3-8B",
       data_path="datasets/lirefs",
       data_name="mmlu-pro-3000samples.json",
-      process_hidden_states_mode=ProcessHiddenStatesMode.ALL_TOKENS,
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,
     )
     commands.append(command)
@@ -137,8 +132,6 @@ def get_mmlu_pro(
       test_data_path="datasets/lirefs",
       test_data_name="mmlu-pro-3000samples.json",
       with_intervention=True,
-
-      process_hidden_states_mode=ProcessHiddenStatesMode.FIRST_ANSWER_TOKEN,
       
       layer_indices=[21],
       direction_normalization_mode=DirectionNormalizationMode.UNIT_VECTOR,

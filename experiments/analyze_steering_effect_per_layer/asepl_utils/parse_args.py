@@ -8,9 +8,10 @@ class Args(TypedDict):
   models_path: str
   model_name: str
 
+  device: str | None
+
   huginn_num_steps: int | None
 
-  process_hidden_states_mode: ProcessHiddenStatesMode
   candidate_directions_file_path: str
   direction_normalization_mode: DirectionNormalizationMode
 
@@ -40,18 +41,19 @@ def parse_args() -> Args:
   )
 
   parser.add_argument(
+    '--device',
+    type=str,
+    help='Device to run the model on. If None, the default device will be used.',
+    default=None,
+  )
+
+  parser.add_argument(
     '--huginn_num_steps',
     type=int,
     help='Number of steps for Huginn model generation. If None, the default value will be used.',
     default=None,
   )
 
-  parser.add_argument(
-    '--process_hidden_states_mode',
-    type=ProcessHiddenStatesMode,
-    choices=list(ProcessHiddenStatesMode),
-    help='Mode for processing hidden states during the experiment.',
-  )
   parser.add_argument(
     '--candidate_directions_file_path',
     type=str,

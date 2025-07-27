@@ -10,7 +10,6 @@ python experiments/analyze_steering_effect_per_layer/main.py \
 \
 {huginn_num_steps_flag} \
 \
-{process_hidden_states_mode_arg} \
 {candidate_directions_file_path_arg} \
 {direction_normalization_mode_flag} \
 \
@@ -26,7 +25,6 @@ def get_analyze_steering_effect_per_layer(
   model_name: str,
   data_path: str,
   data_name: str,
-  process_hidden_states_mode: ProcessHiddenStatesMode,
   direction_normalization_mode: DirectionNormalizationMode,
 ) -> str:
   huginn_num_steps_flag = "--huginn_num_steps 32" if model_name == "huginn-0125" else ""
@@ -36,9 +34,7 @@ def get_analyze_steering_effect_per_layer(
   data_path_arg = f"--data_path \"$WORKSPACE_PATH/{data_path}\""
   data_name_arg = f"--data_name {data_name}"
 
-  process_hidden_states_mode_arg = f"--process_hidden_states_mode {process_hidden_states_mode}"
-
-  candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/{model_name}_mmlu-pro-3000samples.json_{process_hidden_states_mode}_candidate_directions.pt\""
+  candidate_directions_file_path_arg = f"--candidate_directions_file_path \"$WORKSPACE_PATH/experiments/save_candidate_directions/candidate_directions_FIRST_ANSWER_TOKEN.pt\""
 
   return shell.format(
     workspace_path=workspace_path,
@@ -50,7 +46,6 @@ def get_analyze_steering_effect_per_layer(
     data_path_arg=data_path_arg,
     data_name_arg=data_name_arg,
 
-    process_hidden_states_mode_arg=process_hidden_states_mode_arg,
     candidate_directions_file_path_arg=candidate_directions_file_path_arg,
     direction_normalization_mode_flag=direction_normalization_mode_flag,
   )

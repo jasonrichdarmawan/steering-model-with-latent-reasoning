@@ -1,5 +1,3 @@
-from utils import ProcessHiddenStatesMode
-
 shell = """\
 WORKSPACE_PATH={workspace_path}
 
