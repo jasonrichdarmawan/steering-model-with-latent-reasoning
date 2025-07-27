@@ -71,7 +71,7 @@ if False:
 
     '--test_data_path', f'{WORKSPACE_PATH}/datasets/lirefs',
     '--test_data_name', 'mmlu-pro-3000samples.json',
-    # '--test_data_sample_size', '24',
+    '--test_data_sample_size', '24',
     '--with_fewshot_prompts',
     # '--with_cot',
     '--batch_size', '1',
@@ -455,9 +455,10 @@ output_key = ' '.join(
       'with_fewshot_prompts',
   
       'with_intervention',
+      'layer_indices',
       'direction_normalization_mode',
       'projection_hook_mode',
-      'layer_indices',
+      'modification_mode'
       'with_hidden_states_pre_hook',
       'with_hidden_states_post_hook',
       'scale',
@@ -465,8 +466,6 @@ output_key = ' '.join(
   ]
 )
 print(f"Using output key: {output_key}")
-
-# %%
 
 output[output_key] = {
   'reasoning_accuracy': reasoning_accuracy,
