@@ -486,35 +486,20 @@ fig, axes = plt.subplots(
 )
 axes = axes.flatten()
 
-axes[0].plot(
-  range(len(effects['reasoning set'])),
-  [
-    np.mean(effect_values) 
-    for _, effect_values 
-    in effects['reasoning set'].items()
-  ],
-  label='Reasoning Set',
-)
-
-axes[0].plot(
-  range(len(effects['memorizing set'])),
-  [
-    np.mean(effect_values) 
-    for _, effect_values 
-    in effects['memorizing set'].items()
-  ],
-  label='Memorizing Set',
-)
-
-axes[0].plot(
-  range(len(effects['overall set'])),
-  [
-    np.mean(effect_values) 
-    for _, effect_values 
-    in effects['overall set'].items()
-  ],
-  label='Overall Set',
-)
+for set_name, effects_set in effects.items():
+  mean = [np.mean(effect_values) for _, effect_values in effects_set.items()]
+  std = [np.std(effect_values) for _, effect_values in effects_set.items()]
+  axes[0].plot(
+    range(len(effects_set)),
+    mean,
+    label=f"{set_name}"
+  )
+  axes[0].fill_between(
+    range(len(effects_set)),
+    np.array(mean) - np.array(std),
+    np.array(mean) + np.array(std),
+    alpha=0.2,
+  )
 
 axes[0].set_title('Mean Gradients @ Direction per Layer')
 axes[0].set_xlabel('Layer Index')
