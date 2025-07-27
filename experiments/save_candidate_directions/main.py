@@ -105,7 +105,7 @@ for model_name, hs_output in hs_dict.items():
   candidate_directions_dict[model_name] = {
     "reasoning": [],
     "memorizing": [],
-    "layer with the highest cosine similarity": {}
+    "results": {}
   }
   for layer_index, hs in hs_output['hidden_states'].items():
     hs_tensor = t.stack(hs, dim=0)
@@ -123,23 +123,17 @@ for model_name, hs_output in hs_dict.items():
 
 directions: dict[
   str, 
-  dict[str, list[Float[Tensor, "n_embd"]]]
+  list[Float[Tensor, "n_embd"]]
 ] = {}
 for model_name, candidate_directions in candidate_directions_dict.items():
   print(f"Computing directions for model: {model_name}")
-  directions[model_name] = {
-    "reasoning direction": [],
-    "memorizing direction": [],
-  }
+  directions[model_name] = []
   for layer_index in range(len(candidate_directions["reasoning"])):
     reasoning_direction = candidate_directions["reasoning"][layer_index]
     memorizing_direction = candidate_directions["memorizing"][layer_index]
     
-    directions[model_name]["reasoning direction"].append(
+    directions[model_name].append(
       reasoning_direction - memorizing_direction
-    )
-    directions[model_name]["memorizing direction"].append(
-      memorizing_direction - reasoning_direction
     )
 
 # %%
@@ -147,21 +141,12 @@ for model_name, candidate_directions in candidate_directions_dict.items():
 print("Computing cosine similarities between hidden states and candidate directions.")
 cos_sim_dict: dict[
   str, 
-  dict[
-    str, 
-    dict[str, list[Float[Tensor, "batch_size"]]]
-  ]
+  dict[str, list[Float[Tensor, "batch_size"]]]
 ] = {}
 for model_name, hs_output in hs_dict.items():
   cos_sim_dict[model_name] = {
-    "reasoning direction": {
-      "reasoning set": [],
-      "memorizing set": [],
-    },
-    "memorizing direction": {
-      "reasoning set": [],
-      "memorizing set": [],
-    },
+    "reasoning set": [],
+    "memorizing set": [],
   }
   for layer_index, hs in hs_output['hidden_states'].items():
     """
@@ -183,52 +168,41 @@ for model_name, hs_output in hs_dict.items():
     hs_reasoning = hs_tensor[reasoning_indices]
     hs_memorizing = hs_tensor[memorizing_indices]
 
-    cos_sim_dict[model_name]["reasoning direction"]["reasoning set"].append(F.cosine_similarity(
+    cos_sim_dict[model_name]["reasoning set"].append(F.cosine_similarity(
       hs_reasoning,
-      directions[model_name]["reasoning direction"][layer_index].unsqueeze(0),
+      directions[model_name][layer_index].unsqueeze(0),
       dim=-1,
     ))
-    cos_sim_dict[model_name]["reasoning direction"]["memorizing set"].append(F.cosine_similarity(
+    cos_sim_dict[model_name]["memorizing set"].append(F.cosine_similarity(
       hs_memorizing,
-      directions[model_name]["reasoning direction"][layer_index].unsqueeze(0),
-      dim=-1,
-    ))
-
-    cos_sim_dict[model_name]["memorizing direction"]["reasoning set"].append(F.cosine_similarity(
-      hs_reasoning,
-      directions[model_name]["memorizing direction"][layer_index].unsqueeze(0),
-      dim=-1,
-    ))
-    cos_sim_dict[model_name]["memorizing direction"]["memorizing set"].append(F.cosine_similarity(
-      hs_memorizing,
-      directions[model_name]["memorizing direction"][layer_index].unsqueeze(0),
+      directions[model_name][layer_index].unsqueeze(0),
       dim=-1,
     ))
 
   def get_layer_index(
     cos_sim: list[Float[Tensor, "batch_size"]]
   ) -> int:
-    return max(
-      range(len(cos_sim)), 
-      key=lambda i: t.mean(cos_sim[i]).item()
-    )
+    mean = [cos_sim_i.mean() for cos_sim_i in cos_sim]
+    max_index = mean.index(max(mean))
+    min_index = mean.index(min(mean))
+    return max_index, min_index
+
+  res_res_max, res_res_min = get_layer_index(cos_sim_dict[model_name]['reasoning set'])
+  res_mem_max, res_mem_min = get_layer_index(cos_sim_dict[model_name]['memorizing set'])
 
   print(f"Model {model_name}")
-  res_res = get_layer_index(cos_sim_dict[model_name]['reasoning direction']['reasoning set'])
-  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['reasoning direction @ reasoning set'] = res_res
-  print(f"Reasoning direction @ Reasoning set: Layer {res_res}")
+  print(f"Reasoning direction @ Reasoning set: max at layer {res_res_max} max, min at layer {res_res_min}")
+  print(f"Reasoning direction @ Memorizing set: max at layer {res_mem_max}, min at layer {res_mem_min}")
 
-  res_mem = get_layer_index(cos_sim_dict[model_name]['reasoning direction']['memorizing set'])
-  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['reasoning direction @ memorizing set'] = res_mem
-  print(f"Reasoning direction @ Memorizing set: Layer {res_mem}")
-
-  mem_res = get_layer_index(cos_sim_dict[model_name]['memorizing direction']['reasoning set'])
-  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['memorizing direction @ reasoning set'] = mem_res
-  print(f"Memorizing direction @ Reasoning set: Layer {mem_res}")
-
-  mem_mem = get_layer_index(cos_sim_dict[model_name]['memorizing direction']['memorizing set'])
-  candidate_directions_dict[model_name]['layer with the highest cosine similarity']['memorizing direction @ memorizing set'] = mem_mem
-  print(f"Memorizing direction @ Memorizing set: Layer {get_layer_index(cos_sim_dict[model_name]['memorizing direction']['memorizing set'])}")
+  candidate_directions_dict[model_name]['results'].setdefault('cosine similarity', {})
+  candidate_directions_dict[model_name]['results']['cosine similarity'].update({
+    'reasoning direction @ reasoning set max layer': res_res_max,
+    'reasoning direction @ reasoning set min layer': res_res_min,
+  })
+  candidate_directions_dict[model_name]['results']['cosine similarity'].update({
+    'reasoning direction @ memorizing set max layer': res_mem_min,
+    'reasoning direction @ memorizing set min layer': res_mem_max,
+  })
 
 # %%
 
@@ -282,23 +256,13 @@ for ax, (model_name, cos_sim) in zip(axes, cos_sim_dict.items()):
   
   plot(
     ax,
-    cos_sim['reasoning direction']['reasoning set'],
+    cos_sim['reasoning set'],
     label="Reasoning direction @ Reasoning Set",
   )
   plot(
     ax,
-    cos_sim['reasoning direction']['memorizing set'],
+    cos_sim['memorizing set'],
     label="Reasoning direction @ Memorizing Set",
-  )
-  plot(
-    ax,
-    cos_sim['memorizing direction']['reasoning set'],
-    label="Memorizing direction @ Reasoning Set",
-  )
-  plot(
-    ax,
-    cos_sim['memorizing direction']['memorizing set'],
-    label="Memorizing direction @ Memorizing Set",
   )
 
   ax.set_xlabel("Layer Index")
