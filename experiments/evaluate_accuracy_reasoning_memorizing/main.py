@@ -174,8 +174,6 @@ match args["model_name"]:
   case _:
     raise ValueError(f"Unsupported model name: {args['model_name']}")
 
-from transformers.models.llama.modeling_llama import LlamaForCausalLM
-
 model, tokenizer = load_model_and_tokenizer(
   models_path=args['models_path'],
   model_name=args['model_name'],

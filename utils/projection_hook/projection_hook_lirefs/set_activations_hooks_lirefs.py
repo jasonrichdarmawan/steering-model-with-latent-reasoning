@@ -106,6 +106,8 @@ def set_activations_hooks_lirefs(
         )
 
       if config["mlp_hooks_config"]["post_hook"]:
+        if verbose:
+          print(f"Registering MLP post-hook for {model.config.model_type} model at layer index {layer_index}")
         post_hook = ProjectionPostHookLiReFs(
           hook_type=ProjectionPostHookLiReFsModuleType.MLP,
           steering_mode=config["steering_mode"],
@@ -122,6 +124,5 @@ def set_activations_hooks_lirefs(
           hook=post_hook,
         )
         hooks.append(hook)
-        print(f"Registering MLP post-hook for {model.config.model_type} model at layer index {layer_index}")
   
   return hooks

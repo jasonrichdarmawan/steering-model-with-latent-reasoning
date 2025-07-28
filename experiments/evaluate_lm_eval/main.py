@@ -134,6 +134,31 @@ match args["model_name"]:
 
 # %%
 
+from typing import Optional, Any
+import datasets
+from lm_eval.api.task import ConfigurableTask
+
+def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
+  path = os.path.join(
+    args["data_path"], 
+    self.DATASET_PATH,
+  )
+  print(f"Loading dataset from local path: {path}")
+  self.dataset = datasets.load_dataset(
+    path=path,
+    name=self.DATASET_NAME,
+    **dataset_kwargs if dataset_kwargs is not None else {},
+  )
+
+print(
+  "Overriding ConfigurableTask.download to load datasets from local path.\n"
+  f"Specified location: {args['data_path']}/<dataset-name>\n"
+  "Ensure dataset files (including Python scripts) exist at the specified location.\n"
+)
+ConfigurableTask.download = download
+
+# %%
+
 feature_directions: dict[int, Float[Tensor, "n_embd"]] = {}
 overall_directions_magnitude: dict[int, Float[Tensor, ""]] | None = None
 if args["with_intervention"]:
@@ -185,33 +210,6 @@ if args["with_intervention"]:
     )
 else:
   print("No intervention will be performed.")
-
-# %%
-
-from typing import Optional, Any
-import datasets
-from lm_eval.api.task import ConfigurableTask
-
-def download(self, dataset_kwargs: Optional[dict[str, Any]] = None) -> None:
-  path = os.path.join(
-    args["data_path"], 
-    self.DATASET_PATH,
-  )
-  print(f"Loading dataset from local path: {path}")
-  self.dataset = datasets.load_dataset(
-    path=path,
-    name=self.DATASET_NAME,
-    **dataset_kwargs if dataset_kwargs is not None else {},
-  )
-
-print(
-  "Overriding ConfigurableTask.download to load datasets from local path.\n"
-  f"Specified location: {args['data_path']}/<dataset-name>\n"
-  "Ensure dataset files (including Python scripts) exist at the specified location.\n"
-)
-ConfigurableTask.download = download
-
-# %%
 
 if args['with_intervention']:
   print("Setting up projection hooks for the model.")

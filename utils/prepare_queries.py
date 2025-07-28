@@ -7,6 +7,7 @@ def prepare_queries(
   data,
   data_name: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_question_format: bool = True,
   apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: dict[str, list[str]] | None = None,
@@ -34,6 +35,7 @@ def prepare_queries(
           model_name=model_name,
           question_content=question_content,
           tokenizer=tokenizer,
+          apply_question_format=apply_question_format,
           apply_chat_template=apply_chat_template,
           system_prompt=system_prompt,
           fewshot_prompts=fewshot_prompts[entry['category']] if fewshot_prompts else None,
@@ -50,6 +52,7 @@ def prepare_query(
   model_name: str,
   question_content: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_question_format: bool = True,
   apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: list[str] | None = None,
@@ -77,6 +80,7 @@ def prepare_query(
       query = _prepare_query_huginn(
         question_content=question_content,
         tokenizer=tokenizer,
+        apply_question_format=apply_question_format,
         apply_chat_template=apply_chat_template,
         system_prompt=system_prompt,
         fewshot_prompts=fewshot_prompts,
@@ -88,6 +92,7 @@ def prepare_query(
       query = _prepare_query_llama(
         question_content=question_content,
         tokenizer=tokenizer,
+        apply_question_format=apply_question_format,
         apply_chat_template=apply_chat_template,
         system_prompt=system_prompt,
         fewshot_prompts=fewshot_prompts,
@@ -101,6 +106,7 @@ def prepare_query(
 def _prepare_query_llama(
   question_content: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_question_format: bool = True,
   apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: list[str] | None = None,
@@ -115,10 +121,13 @@ def _prepare_query_llama(
     for fewshot_prompt in fewshot_prompts:
       user_content += f"{fewshot_prompt}\n\n"
   
-  if fewshot_prompts and with_cot:
-    user_content += f"Q: {question_content}\nA: Let's think step by step. "
+  if apply_question_format:
+    if fewshot_prompts and with_cot:
+      user_content += f"Q: {question_content}\nA: Let's think step by step. "
+    else:
+      user_content += f"Q: {question_content}\nA: "
   else:
-    user_content += f"Q: {question_content}\nA: "
+    user_content += question_content
 
   if apply_chat_template is False:
     query = user_content
@@ -133,6 +142,7 @@ def _prepare_query_llama(
 def _prepare_query_huginn(
   question_content: str,
   tokenizer: PreTrainedTokenizerBase | None = None,
+  apply_question_format: bool = True,
   apply_chat_template: bool = False,
   system_prompt: str | None = None,
   fewshot_prompts: list[str] | None = None,
@@ -149,13 +159,16 @@ def _prepare_query_huginn(
     for fewshot_prompt in fewshot_prompts:
       user_content += f"{fewshot_prompt}\n\n"
   
-  # If few-shot prompts are provided and chain-of-thought (CoT) reasoning is enabled (with_cot=True),
-  # append the question followed by "A: Let's think step by step." to encourage step-by-step reasoning.
-  # Otherwise, append the question followed by "A: " for a direct answer.
-  if fewshot_prompts and with_cot:
-    user_content += f"Q: {question_content}\n\nA: Let's think step by step. "
+  if apply_question_format:
+    # If few-shot prompts are provided and chain-of-thought (CoT) reasoning is enabled (with_cot=True),
+    # append the question followed by "A: Let's think step by step." to encourage step-by-step reasoning.
+    # Otherwise, append the question followed by "A: " for a direct answer.
+    if fewshot_prompts and with_cot:
+      user_content += f"Q: {question_content}\n\nA: Let's think step by step. "
+    else:
+      user_content += f"Q: {question_content}\n\nA: "
   else:
-    user_content += f"Q: {question_content}\n\nA: "
+    user_content += question_content
 
   if apply_chat_template is False:
     query = user_content

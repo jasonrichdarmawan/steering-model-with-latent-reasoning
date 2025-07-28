@@ -54,36 +54,18 @@ class ProjectionPreHookLiReFs:
     module,
     input,
   ):
+    match self.modification_mode:
+      case TokenModificationMode.LAST_TOKEN:
+        index = (slice(None), -1)
+      case TokenModificationMode.ALL_TOKENS:
+        index = (slice(None), slice(None))
+      case _:
+        raise ValueError("Unsupported TokenModificationMode: {self.modification_mode}")
+
     match self.steering_mode:
       case ProjectionHookMode.FEATURE_ADDITION:
-        match self.modification_mode:
-          case TokenModificationMode.LAST_TOKEN:
-            input[0][:, -1] += self.scale * self.feature_direction_normalized
-          case TokenModificationMode.ALL_TOKENS:
-            input[0][:] += self.scale * self.feature_direction_normalized
-          case _:
-            raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
-      case ProjectionHookMode.FEATURE_AMPLIFICATION:
-        match self.modification_mode:
-          case TokenModificationMode.LAST_TOKEN:
-            projection = compute_projection(
-              data=input[0][:, -1],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            input[0][:, -1] += projection
-          case TokenModificationMode.ALL_TOKENS:
-            projection = compute_projection(
-              data=input[0],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            input[0][:] += projection
-          case _:
-            raise ValueError(f"Unsupported modification mode: {self.modification_mode}")
-      case ProjectionHookMode.FEATURE_ABLATION:
+        delta = self.scale * self.feature_direction_normalized
+      case ProjectionHookMode.FEATURE_ABLATION | ProjectionHookMode.FEATURE_AMPLIFICATION:
         """
         we project the activation vector v 
         onto the direction vector d because 
@@ -108,24 +90,20 @@ class ProjectionPreHookLiReFs:
         effectively "ablating" that feature
         from the model's processing stream.
         """
-        match self.modification_mode:
-          case TokenModificationMode.LAST_TOKEN:
-            projection = compute_projection(
-              data=input[0][:, -1],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            input[0][:, -1] -= projection
-          case TokenModificationMode.ALL_TOKENS:
-            projection = compute_projection(
-              data=input[0],
-              direction_normalization_mode=self.direction_normalization_mode,
-              feature_direction_normalized=self.feature_direction_normalized,
-              overall_direction_magnitude=self.overall_direction_magnitude,
-            )
-            input[0][:] -= projection
-          case _:
-            raise ValueError(f"Unsupported token modification mode: {self.modification_mode}")
+        target_tensor = input[0] if isinstance(input, tuple) else input
+        projection = compute_projection(
+          data=target_tensor[index],
+          direction_normalization_mode=self.direction_normalization_mode,
+          feature_direction_normalized=self.feature_direction_normalized,
+          overall_direction_magnitude=self.overall_direction_magnitude,
+        )
+
+        sign = 1 if self.steering_mode == ProjectionHookMode.FEATURE_AMPLIFICATION else -1
+        delta = sign * projection
       case _:
-        raise ValueError(f"Unsupported mode: {self.steering_mode}")
+        raise ValueError("Unsupported ProjectionHookMode: {self.steering_mode}")
+      
+    if isinstance(input, tuple):
+      input[0][index] += delta
+    else:
+      input[index] += delta

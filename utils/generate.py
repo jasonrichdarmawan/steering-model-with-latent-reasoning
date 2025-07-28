@@ -24,6 +24,7 @@ def generate(
     case "llama":
       return generate_lirefs(
         model=model,
+        tokenizer=tokenizer,
         input_ids=input_ids,
         attention_mask=attention_mask,
       )
@@ -72,14 +73,22 @@ def generate_huginn(
 
 def generate_lirefs(
   model: nn.Module,
+  tokenizer: PreTrainedTokenizerBase,
   input_ids: Float[Tensor, "batch seq_len"],
   attention_mask: Float[Tensor, "batch seq_len"],
 ):
+  eos_token_id = tokenizer.convert_tokens_to_ids([
+    "<|end_of_text|>",
+    "<|eot_id|>"
+  ])
+
   outputs = model.generate(
     input_ids=input_ids,
     attention_mask=attention_mask,
     max_new_tokens=200,
     do_sample=False,
+    eos_token_id=eos_token_id,
+    use_cache=False,
   )
 
   return outputs
